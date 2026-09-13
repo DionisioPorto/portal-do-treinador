@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ aluno['nome'] }} · Financeiro · Portal{% endblock %}
+{% block content %}
+{% include "_aluno_cabecalho.html" %}
+
+<div class="page-head">
+  <div>
+    <h2 style="font-size:19px;">Financeiro</h2>
+    <div class="muted small">Histórico de pagamentos deste aluno</div>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-receipt"/></svg>Histórico de pagamentos</h3>
+  </div>
+  {% if pagamentos %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Mês</th>
+        <th class="num">Valor</th>
+        <th>Status</th>
+        <th>Data de pagamento</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in pagamentos %}
+      <tr>
+        <td><strong>{{ mes_label(p['mes']) }}</strong></td>
+        <td class="num strong">{{ brl(p['valor']) }}</td>
+        <td><span class="badge {{ p['status'] }}">{{ p['status'] }}</span></td>
+        <td class="muted">{{ formatar_data(p['data_pagamento']) }}</td>
+        <td class="actions-cell">
+          {% if p['status'] == 'pago' %}
+          <form method="post" action="{{ url_for('financeiro_status') }}" class="confirmar inline" data-confirm="Marcar como pendente nesse mês?">
+            <input type="hidden" name="aluno_id" value="{{ aluno['id'] }}">
+            <input type="hidden" name="mes" value="{{ p['mes'] }}">
+            <input type="hidden" name="status" value="pendente">
+            <input type="hidden" name="voltar" value="aluno">
+            <button type="submit" class="btn ghost small">Marcar pendente</button>
+          </form>
+          {% else %}
+          <form method="post" action="{{ url_for('financeiro_status') }}">
+            <input type="hidden" name="aluno_id" value="{{ aluno['id'] }}">
+            <input type="hidden" name="mes" value="{{ p['mes'] }}">
+            <input type="hidden" name="status" value="pago">
+            <input type="hidden" name="voltar" value="aluno">
+            <button type="submit" class="btn primary small">
+              <svg class="icon"><use href="#i-check"/></svg>Confirmar pagamento
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-ico"><svg class="icon"><use href="#i-receipt"/></svg></div>
+    <h3>Sem registros de pagamento</h3>
+    <p>As mensalidades aparecem aqui automaticamente quando você visita o financeiro.</p>
+  </div>
+  {% endif %}
+</section>
+
+<div class="card note-card">
+  <svg class="icon"><use href="#i-info"/></svg>
+  <p>O valor e o dia de vencimento deste aluno podem ser ajustados em <strong>Editar aluno</strong>. Confirmar o pagamento registra a data de hoje.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dieta · {{ aluno['nome'] }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="print">
+  <div class="no-print print-bar">
+    <button class="btn primary" onclick="window.print()">
+      <svg class="icon"><use href="#i-printer"/></svg>Imprimir / Salvar PDF
+    </button>
+    <button class="btn ghost" onclick="history.back()">
+      <svg class="icon"><use href="#i-arLeft"/></svg>Voltar
+    </button>
+  </div>
+
+  <div class="print-sheet">
+    <header class="print-brand">
+      <div class="print-brand-name">PORTO CONSULTORIA LTDA</div>
+      <div class="print-brand-doc">Treinamento e nutrição personalizados</div>
+    </header>
+
+    <div class="print-head">
+      <h1 style="font-size:24px;">Plano alimentar</h1>
+      <div style="text-align:right;">
+        <div class="strong">{{ aluno['nome'] }}</div>
+        <div class="muted small">{{ aluno['objetivo'] or '' }}</div>
+        {% if aluno['plano'] %}<div class="muted small">{{ aluno['plano'] }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% if metas %}
+    <section class="print-block">
+      <h2>Metas diárias</h2>
+      <div class="chips-row">
+        <span class="chip">Calorias: <strong>{{ "%.0f" | format(metas['kcal_diaria']) }} kcal</strong></span>
+        <span class="chip">Proteínas: <strong>{{ metas['proteinas'] }} g</strong></span>
+        <span class="chip">Carboidratos: <strong>{{ metas['carbs'] }} g</strong></span>
+        <span class="chip">Gorduras: <strong>{{ metas['gorduras'] }} g</strong></span>
+      </div>
+      {% if metas['observacoes'] %}<p class="muted small">{{ metas['observacoes'] }}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    <section class="print-block">
+      <h2>Refeições</h2>
+      {% if refeicoes %}
+      <table class="table">
+        <thead>
+          <tr><th>Refeição</th><th>Horário</th><th>Alimentos</th><th class="num">kcal</th><th class="num">Prot</th><th class="num">Carb</th><th class="num">Gord</th></tr>
+        </thead>
+        <tbody>
+          {% for r in refeicoes %}
+          <tr>
+            <td class="strong">{{ r['nome'] }}</td>
+            <td>{{ r['horario'] or '—' }}</td>
+            <td>
+              {% if alim.get(r['id']) %}
+              <div style="display:grid;gap:6px;">
+                {% for f in alim[r['id']] %}
+                <div>
+                  <div class="strong" style="font-size:13px;">{{ f['nome'] }}{% if f['qtd'] %} · <span style="font-weight:600;">{{ f['qtd'] }} g</span>{% endif %}</div>
+                  {% if f['subs'] %}
+                  <div class="muted small">Substitua por: {{ f['subs'] | join(', ') }}</div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              {% elif r['descricao'] %}{{ r['descricao'] }}{% else %}—{% endif %}
+            </td>
+            <td class="num">{{ r['calorias'] or 0 }}</td>
+            <td class="num">{{ r['proteinas'] or 0 }}</td>
+            <td class="num">{{ r['carbs'] or 0 }}</td>
+            <td class="num">{{ r['gorduras'] or 0 }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="table-total">
+            <td colspan="3"><strong>Total do plano</strong></td>
+            <td class="num"><strong>{{ totais['calorias'] }}</strong></td>
+            <td class="num"><strong>{{ totais['proteinas'] }}</strong></td>
+            <td class="num"><strong>{{ totais['carbs'] }}</strong></td>
+            <td class="num"><strong>{{ totais['gorduras'] }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">Nenhuma refeição cadastrada.</p>
+      {% endif %}
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Alunos · Portal do Treinador{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="head-title">
+    <span class="page-title-ico"><svg class="icon"><use href="#i-users"/></svg></span>
+    <div>
+      <h1>Alunos</h1>
+      <div class="sub">Busque e abra a ficha de cada aluno</div>
+    </div>
+  </div>
+  <button class="btn primary" onclick="document.getElementById('form-novo-aluno').showModal()">
+    <svg class="icon"><use href="#i-plus"/></svg>Novo aluno
+  </button>
+</div>
+
+<div class="search-wrap">
+  <svg class="icon"><use href="#i-search"/></svg>
+  <input type="search" id="busca-alunos" placeholder="Buscar por nome, objetivo ou telefone..." autocomplete="off">
+</div>
+<p class="count-line" id="resultado-contagem">Todos os alunos</p>
+
+<div class="alunos-list" id="lista-alunos">
+  {% for r in rows %}
+  {% set a = r['aluno'] %}
+  <a class="aluno-card" href="{{ url_for('treino', aluno_id=a['id']) }}" data-busca="{{ a['nome'] }} {{ a['objetivo'] or '' }} {{ a['telefone'] or '' }}">
+    <span class="avatar">{{ iniciais(a['nome']) }}</span>
+    <div class="aluno-info">
+      <div class="aluno-nome">{{ a['nome'] }}</div>
+      <div class="aluno-sub">{% if a['objetivo'] %}{{ a['objetivo'] }}{% else %}Sem objetivo definido{% endif %}</div>
+      {% if a['telefone'] %}
+      <div class="aluno-telefone"><svg class="icon" style="width:13px;height:13px;"><use href="#i-activity"/></svg>{{ a['telefone'] }}</div>
+      {% endif %}
+    </div>
+    <div class="aluno-meta">
+      <span class="badge {{ r['status'] }}">{{ r['status'] }}</span>
+      <span class="venc">Venc. dia {{ a['dia_vencimento'] }}</span>
+    </div>
+  </a>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-ico"><svg class="icon"><use href="#i-users"/></svg></div>
+    <h3>Nenhum aluno ainda</h3>
+    <p>Clique em "Novo aluno" para começar a montar os treinos.</p>
+    <button class="btn primary" onclick="document.getElementById('form-novo-aluno').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo aluno
+    </button>
+  </div>
+  {% endfor %}
+</div>
+
+<dialog id="form-novo-aluno" class="modal">
+  <form method="post" action="{{ url_for('novo_aluno') }}">
+    <div class="modal-head">
+      <h2>Novo aluno</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-novo-aluno').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field">
+      <label for="nome">Nome *</label>
+      <input type="text" id="nome" name="nome" required autofocus placeholder="Nome do aluno">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="telefone">Telefone</label>
+        <input type="text" id="telefone" name="telefone" placeholder="(11) 99999-9999">
+      </div>
+      <div class="field">
+        <label for="objetivo">Objetivo</label>
+        <input type="text" id="objetivo" name="objetivo" placeholder="Hipertrofia, recomp...">
+      </div>
+    </div>
+    <div class="card-head" style="margin-top:8px;justify-content:flex-start;">
+      <h3><svg class="icon"><use href="#i-zap"/></svg>Assistente de plano</h3>
+    </div>
+    <div class="grid-form">
+      <div class="field"><label for="n-altura">Altura (cm)</label><input type="number" step="0.1" id="n-altura" name="altura_cm" placeholder="175"></div>
+      <div class="field"><label for="n-peso">Peso atual (kg)</label><input type="number" step="0.1" id="n-peso" name="peso_atual" placeholder="72"></div>
+      <div class="field"><label for="n-fator">Fator de atividade</label><input type="number" step="0.05" id="n-fator" name="fator_atividade" value="1.55"></div>
+      <div class="field"><label for="n-sexo">Fórmula</label>
+        <select id="n-sexo" name="sexo_formula">
+          <option value="M" selected>Masculina (padrão TH)</option>
+          <option value="F">Feminina</option>
+        </select>
+      </div>
+      <div class="field"><label for="n-objmeta">Objetivo da meta</label>
+        <select id="n-objmeta" name="objetivo_meta">
+          {% for k, v in OBJETIVOS_META.items() %}
+          <option value="{{ k }}" {{ 'selected' if k == 'emagrecer' else '' }}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field"><label for="n-ajuste">Ajuste (%)</label><input type="number" id="n-ajuste" name="ajuste_meta" value="-10"></div>
+      <div class="field"><label for="n-proteina">Proteína (g/kg)</label><input type="number" step="0.1" id="n-proteina" name="proteina_kg" value="2.0"></div>
+      <div class="field"><label for="n-dias">Dias de treino</label>
+        <select id="n-dias" name="dias_treino">
+          {% for d in [3, 4, 5, 6] %}
+          <option value="{{ d }}" {{ 'selected' if d == 3 else '' }}>{{ d }} dias</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" name="foco_gluteo" value="1"> Foco em glúteos também</label>
+    </div>
+    <div class="field">
+      <label for="n-rotina">Rotina do aluno</label>
+      <textarea id="n-rotina" name="rotina" rows="4" placeholder="Ex: Acordo 6h, café 7h, almoço 12h30, jantar 20h30. Treino seg/qua/sex."></textarea>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-novo-aluno').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Criar aluno
+      </button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

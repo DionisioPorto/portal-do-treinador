@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}{{ aluno['nome'] }} · Treino · Portal{% endblock %}
+{% block content %}
+{% include "_aluno_cabecalho.html" %}
+
+<div class="page-head">
+  <div>
+    <h2 style="font-size:19px;">Treinos</h2>
+    <div class="muted small">Monte os treinos por dia da semana</div>
+  </div>
+  <div class="head-actions">
+    <a class="btn ghost" href="{{ url_for('imprimir_treino', aluno_id=aluno['id']) }}" target="_blank">
+      <svg class="icon"><use href="#i-printer"/></svg>Imprimir / PDF
+    </a>
+    <button class="btn primary" onclick="document.getElementById('form-novo-treino').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo treino
+    </button>
+  </div>
+</div>
+
+{% if treinos %}
+<div class="treinos-list">
+  {% for t in treinos %}
+  <section class="card treino-card">
+    <div class="treino-head">
+      <div>
+        <h3 class="treino-nome">
+          <svg class="icon" style="vertical-align:-3px; color:var(--accent);"><use href="#i-dumbbell"/></svg>
+          {{ t['nome'] }}
+          {% if t['dia_semana'] %}<span class="chip" style="margin-left:6px;">{{ t['dia_semana'] }}</span>{% endif %}
+        </h3>
+        {% if t['notas'] %}<p class="muted small" style="margin:6px 0 0;">{{ t['notas'] }}</p>{% endif %}
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="btn ghost small" onclick="abrirEdicaoTreino({{ t['id'] }}, '{{ t['nome'] | e }}', '{{ t['dia_semana'] | e }}', {{ t['ordem'] or 0 }}, '{{ t['notas'] | e }}')">
+          <svg class="icon"><use href="#i-pencil"/></svg>
+        </button>
+        <form method="post" action="{{ url_for('excluir_treino', aluno_id=aluno['id'], treino_id=t['id']) }}" class="confirmar" data-confirm="Excluir este treino e todos os exercícios?">
+          <button type="submit" class="btn ghost danger small">
+            <svg class="icon"><use href="#i-trash"/></svg>Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {% set exs = exercicios.get(t['id'], []) %}
+    {% if exs %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Exercício</th>
+          <th>Séries</th>
+          <th>Repetições</th>
+          <th>Carga</th>
+          <th>Descanso</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in exs %}
+        <tr>
+          <td>
+            <div class="strong">{{ e['nome'] }}</div>
+            {% if e['grupo'] %}<div class="muted small">{{ e['grupo'] }}</div>{% endif %}
+          </td>
+          <td>{{ e['series'] or '—' }}</td>
+          <td>{{ e['repeticoes'] or '—' }}</td>
+          <td>{{ e['carga'] or '—' }}</td>
+          <td>{{ e['descanso'] or '—' }}</td>
+          <td class="actions-cell">
+            <div style="display:flex;gap:4px;">
+              <button class="btn ghost small" onclick="abrirEdicaoExercicio({{ e['id'] }}, '{{ e['nome'] | e }}', '{{ e['grupo'] | e }}', '{{ e['series'] | e }}', '{{ e['repeticoes'] | e }}', '{{ e['carga'] | e }}', '{{ e['descanso'] | e }}')">
+                <svg class="icon"><use href="#i-pencil"/></svg>
+              </button>
+              <form method="post" action="{{ url_for('excluir_exercicio', exercicio_id=e['id']) }}" class="confirmar" data-confirm="Excluir este exercício?">
+                <button type="submit" class="btn ghost danger small">Remover</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted empty">Nenhum exercício neste treino ainda.</p>
+    {% endif %}
+
+    <details class="add-exercicio">
+      <summary>
+        <svg class="icon"><use href="#i-down"/></svg>Adicionar exercício
+      </summary>
+      <form method="post" action="{{ url_for('novo_exercicio', treino_id=t['id']) }}" class="grid-form">
+        <div class="field"><label>Exercício *</label><input name="nome" required placeholder="Supino reto"></div>
+        <div class="field"><label>Grupo muscular</label><input name="grupo" placeholder="Peito, Costas..."></div>
+        <div class="field"><label>Séries</label><input name="series" placeholder="4"></div>
+        <div class="field"><label>Repetições</label><input name="repeticoes" placeholder="8-12"></div>
+        <div class="field"><label>Carga</label><input name="carga" placeholder="20 kg"></div>
+        <div class="field"><label>Descanso</label><input name="descanso" placeholder="60s"></div>
+        <div class="form-actions span-all">
+          <button type="submit" class="btn primary small">
+            <svg class="icon"><use href="#i-plus"/></svg>Adicionar
+          </button>
+        </div>
+      </form>
+    </details>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+  <div class="empty-ico"><svg class="icon"><use href="#i-dumbbell"/></svg></div>
+  <h3>Nenhum treino montado</h3>
+  <p>Comece criando o primeiro treino para este aluno.</p>
+  <button class="btn primary" onclick="document.getElementById('form-novo-treino').showModal()">
+    <svg class="icon"><use href="#i-plus"/></svg>Novo treino
+  </button>
+</div>
+{% endif %}
+
+<dialog id="form-novo-treino" class="modal">
+  <form method="post" action="{{ url_for('novo_treino', aluno_id=aluno['id']) }}">
+    <div class="modal-head">
+      <h2>Novo treino</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-novo-treino').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label for="nt-nome">Nome do treino *</label><input type="text" id="nt-nome" name="nome" required placeholder="Treino A" autofocus></div>
+    <div class="field-row">
+      <div class="field"><label for="nt-dia">Dias da semana</label><input type="text" id="nt-dia" name="dia_semana" placeholder="Segunda e Quinta"></div>
+      <div class="field"><label for="nt-ordem">Ordem</label><input type="number" id="nt-ordem" name="ordem" value="1"></div>
+    </div>
+    <div class="field"><label for="nt-notas">Notas</label><textarea id="nt-notas" name="notas" rows="2" placeholder="Ex: foco em hipertrofia de peitoral"></textarea></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-novo-treino').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Criar treino
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-editar-treino" class="modal">
+  <form method="post" id="form-editar-treino-action">
+    <div class="modal-head">
+      <h2>Editar treino</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-editar-treino').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label for="et-nome">Nome do treino *</label><input type="text" id="et-nome" name="nome" required></div>
+    <div class="field-row">
+      <div class="field"><label for="et-dia">Dias da semana</label><input type="text" id="et-dia" name="dia_semana"></div>
+      <div class="field"><label for="et-ordem">Ordem</label><input type="number" id="et-ordem" name="ordem"></div>
+    </div>
+    <div class="field"><label for="et-notas">Notas</label><textarea id="et-notas" name="notas" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-editar-treino').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-editar-exercicio" class="modal">
+  <form method="post" id="form-editar-exercicio-action">
+    <div class="modal-head">
+      <h2>Editar exercício</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-editar-exercicio').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label for="ee-nome">Exercício *</label><input type="text" id="ee-nome" name="nome" required></div>
+    <div class="field"><label for="ee-grupo">Grupo muscular</label><input type="text" id="ee-grupo" name="grupo"></div>
+    <div class="field-row">
+      <div class="field"><label for="ee-series">Séries</label><input type="text" id="ee-series" name="series"></div>
+      <div class="field"><label for="ee-reps">Repetições</label><input type="text" id="ee-reps" name="repeticoes"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="ee-carga">Carga</label><input type="text" id="ee-carga" name="carga"></div>
+      <div class="field"><label for="ee-descanso">Descanso</label><input type="text" id="ee-descanso" name="descanso"></div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-editar-exercicio').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function abrirEdicaoTreino(id, nome, dia, ordem, notas) {
+  var d = document.getElementById('form-editar-treino');
+  document.getElementById('form-editar-treino-action').action = '/aluno/{{ aluno["id"] }}/treino/' + id + '/editar';
+  document.getElementById('et-nome').value = nome;
+  document.getElementById('et-dia').value = dia;
+  document.getElementById('et-ordem').value = ordem;
+  document.getElementById('et-notas').value = notas;
+  d.showModal();
+}
+function abrirEdicaoExercicio(id, nome, grupo, series, reps, carga, descanso) {
+  var d = document.getElementById('form-editar-exercicio');
+  document.getElementById('form-editar-exercicio-action').action = '/exercicio/' + id + '/editar';
+  document.getElementById('ee-nome').value = nome;
+  document.getElementById('ee-grupo').value = grupo;
+  document.getElementById('ee-series').value = series;
+  document.getElementById('ee-reps').value = reps;
+  document.getElementById('ee-carga').value = carga;
+  document.getElementById('ee-descanso').value = descanso;
+  d.showModal();
+}
+</script>
+{% endblock %}

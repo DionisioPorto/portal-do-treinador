@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}{{ aluno['nome'] }} · Assistente · Portal{% endblock %}
+{% block content %}
+{% include "_aluno_cabecalho.html" %}
+
+<div class="page-head">
+  <div>
+    <h2 style="font-size:19px;">Assistente de plano</h2>
+    <div class="muted small">Calcula dieta e treino por Harris-Benedict (low volume · masculinização)</div>
+  </div>
+  <div class="head-actions">
+    <form method="post" action="{{ url_for('aplicar_treino', aluno_id=aluno['id']) }}" class="inline">
+      <button type="submit" class="btn ghost">
+        <svg class="icon"><use href="#i-dumbbell"/></svg>Aplicar treino
+      </button>
+    </form>
+    <form method="post" action="{{ url_for('aplicar_dieta', aluno_id=aluno['id']) }}" class="inline">
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-utensils"/></svg>Aplicar dieta
+      </button>
+    </form>
+  </div>
+</div>
+
+<p class="count-line">Os botões acima salvam a prévia no treino e na dieta do aluno. Você pode ajustar por dentro depois.</p>
+
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-activity"/></svg>Parâmetros do cálculo</h3>
+    <span class="chip accent">Editar e recalcular</span>
+  </div>
+  <form method="post" action="{{ url_for('parametros_plano', aluno_id=aluno['id']) }}" class="grid-form">
+    <div class="field">
+      <label for="p-redress">Nascimento</label>
+      <input type="date" id="p-redress" name="nascimento" value="{{ aluno['nascimento'] or '' }}">
+    </div>
+    <div class="field">
+      <label for="p-alt">Altura (cm)</label>
+      <input type="number" step="0.1" id="p-alt" name="altura_cm" value="{{ aluno['altura_cm'] or '' }}" placeholder="175">
+    </div>
+    <div class="field">
+      <label for="p-peso">Peso atual (kg)</label>
+      <input type="number" step="0.1" id="p-peso" name="peso_atual" value="{{ aluno['peso_atual'] or '' }}" placeholder="72">
+    </div>
+    <div class="field">
+      <label for="p-fator">Fator de atividade</label>
+      <input type="number" step="0.05" id="p-fator" name="fator_atividade" value="{{ aluno['fator_atividade'] or 1.55 }}" placeholder="1.55">
+    </div>
+    <div class="field">
+      <label for="p-sexo">Fórmula</label>
+      <select id="p-sexo" name="sexo_formula">
+        <option value="M" {{ 'selected' if aluno['sexo_formula'] == 'M' else '' }}>Masculina (padrão TH)</option>
+        <option value="F" {{ 'selected' if aluno['sexo_formula'] == 'F' else '' }}>Feminina</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="p-obj">Objetivo da meta</label>
+      <select id="p-obj" name="objetivo_meta">
+        {% for k, v in OBJETIVOS_META.items() %}
+        <option value="{{ k }}" {{ 'selected' if aluno['objetivo_meta'] == k else '' }}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="p-ajuste">Ajuste (%)</label>
+      <input type="number" id="p-ajuste" name="ajuste_meta" value="{{ aluno['ajuste_meta'] or '' }}" placeholder="-10">
+    </div>
+    <div class="field">
+      <label for="p-prot">Proteína (g/kg)</label>
+      <input type="number" step="0.1" id="p-prot" name="proteina_kg" value="{{ aluno['proteina_kg'] or 2.0 }}" placeholder="2.0">
+    </div>
+    <div class="field">
+      <label for="p-dias">Dias de treino</label>
+      <select id="p-dias" name="dias_treino">
+        {% for d in [3, 4, 5, 6] %}
+        <option value="{{ d }}" {{ 'selected' if aluno['dias_treino'] == d else '' }}>{{ d }} dias</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field span-all">
+      <label>
+        <input type="checkbox" name="foco_gluteo" value="1" {{ 'checked' if aluno['foco_gluteo'] else '' }}>
+        Foco em glúteos também (adiciona exercícios de glúteo em cada treino)
+      </label>
+    </div>
+    <div class="form-actions span-all">
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-zap"/></svg>Recalcular plano
+      </button>
+    </div>
+  </form>
+</section>
+
+<section class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-clock"/></svg>Rotina do aluno</h3>
+    <span class="chip accent">Colar e analisar</span>
+  </div>
+  <p class="muted small" style="margin:0 0 10px;">Cole a rotina do aluno (horários de acordar/refeições, dias de treino). O assistente detecta os dias de treino e ajusta os horários das refeições automaticamente.</p>
+  <form method="post" action="{{ url_for('analisar_rotina_aluno', aluno_id=aluno['id']) }}">
+    <textarea name="rotina" rows="5" style="resize:vertical;" placeholder="Ex: Acordo às 6h todos os dias. Café às 7h, almoço às 12h30, lanche às 16h, jantar às 20h30. Treino na segunda, quarta e sexta.">{{ aluno['rotina'] or '' }}</textarea>
+    <div class="form-actions" style="justify-content:flex-end;padding:0;margin-top:10px;">
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-zap"/></svg>Analisar rotina
+      </button>
+    </div>
+  </form>
+  {% if rot %}
+  <div class="chips-row" style="margin-top:12px;">
+    {% if rot.qtd_dias in [3, 4, 5, 6] %}
+    <span class="chip accent">Dias: <strong>{{ rot.qtd_dias }}</strong> · {{ rot.dias_ordem | join(', ') }}</span>
+    {% elif rot.frequencia %}
+    <span class="chip accent">Frequência: <strong>{{ rot.frequencia }}x/semana</strong></span>
+    {% else %}
+    <span class="chip">Dias de treino não identificados ({{ aluno['dias_treino'] or 3 }} mantido)</span>
+    {% endif %}
+    {% if rot.tem_tempos %}
+    <span class="chip">Horários: {% for nome, hora in rot.horarios.items() %}{{ nome }} {{ hora }}{{ ' · ' if not loop.last else '' }}{% endfor %}</span>
+    {% else %}
+    <span class="chip">Horários não citados na rotina (padrões mantidos)</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{% if not aluno['peso_atual'] or not aluno['altura_cm'] %}
+<div class="card empty-state">
+  <div class="empty-ico"><svg class="icon"><use href="#i-alert"/></svg></div>
+  <h3>Cadastre altura e peso</h3>
+  <p>Preencha <strong>altura</strong> e <strong>peso atual</strong> acima e clique em “Recalcular plano” para ver o cálculo.</p>
+</div>
+{% else %}
+<div class="cards-grid" style="margin-bottom:0;">
+  <div class="card stat">
+    <div class="stat-label">TMB (Harris-Benedict)</div>
+    <div class="stat-value">{{ "%.0f" | format(c['tmb']) }} <span style="font-size:14px;">kcal</span></div>
+    <div class="stat-sub">Fórmula {{ c['sexo'] }} · {{ c['idade'] }} anos · {{ "%.1f" | format(c['altura']) }} cm · {{ "%.1f" | format(c['peso']) }} kg</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Gasto diário (TDEE × {{ "%.2f" | format(c['fator']) }})</div>
+    <div class="stat-value">{{ "%.0f" | format(c['tdee']) }} <span style="font-size:14px;">kcal</span></div>
+    <div class="stat-sub">{{ OBJETIVOS_META[c['objetivo']] }} · ajuste {{ "%+.0f" | format(c['ajuste']) }}%</div>
+  </div>
+  <div class="card stat accent-frame">
+    <div class="stat-label">Meta diária</div>
+    <div class="stat-value">{{ "%.0f" | format(c['meta_kcal']) }} <span style="font-size:14px;">kcal</span></div>
+    <div class="stat-sub">meta final de calorias</div>
+  </div>
+</div>
+
+<section class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-flame"/></svg>Macros recomendados</h3>
+  </div>
+  <div class="chips-row">
+    <span class="chip accent">Calorias: <strong>{{ "%.0f" | format(c['meta_kcal']) }} kcal</strong></span>
+    <span class="chip">Proteínas: <strong>{{ "%.0f" | format(c['proteina']) }} g</strong></span>
+    <span class="chip">Carboidratos: <strong>{{ "%.0f" | format(c['carbo']) }} g</strong></span>
+    <span class="chip">Gorduras: <strong>{{ "%.0f" | format(c['gordura']) }} g</strong></span>
+  </div>
+</section>
+{% endif %}
+
+<section class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-utensils"/></svg>Prévia da dieta (5 refeições)</h3>
+    <form method="post" action="{{ url_for('aplicar_dieta', aluno_id=aluno['id']) }}" class="inline">
+      <button type="submit" class="btn ghost small">
+        <svg class="icon"><use href="#i-check"/></svg>Aplicar
+      </button>
+    </form>
+  </div>
+  {% if refeicoes %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Refeição</th>
+        <th>Horário</th>
+        <th class="num">% do total</th>
+        <th class="num">kcal previstas</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for nome, hora, frac, kcal in refeicoes %}
+      <tr>
+        <td class="strong">{{ nome }}</td>
+        <td class="muted">{{ hora }}</td>
+        <td class="num">{{ "%.0f" | format(frac * 100) }}%</td>
+        <td class="num strong">{{ kcal }} kcal</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>Cadastre os parâmetros para gerar a prévia.</p></div>
+  {% endif %}
+</section>
+
+<section class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-dumbbell"/></svg>Prévia do treino ({{ treinos|length }} sessões)</h3>
+    <span class="chip accent">Low volume · alta intensidade</span>
+  </div>
+  {% if treinos %}
+  <div class="treinos-lib">
+    {% for t in treinos %}
+    <div class="treino-lib-item">
+      <div class="treino-lib-name">{{ t['nome'] }}
+        {% if semana[loop.index0] %}<span class="chip" style="margin-left:6px;">{{ semana[loop.index0] }}</span>{% endif %}
+        <span class="chip" style="margin-left:6px;">{{ t['itens']|length }} exercícios</span>
+      </div>
+      <ul>
+        {% for e in t['itens'] %}
+        <li>{{ e['nome'] }} · <span class="muted">{{ e['series'] }}x {{ e['repeticoes'] }} · descanso {{ e['descanso'] }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="form-actions">
+    <form method="post" action="{{ url_for('aplicar_treino', aluno_id=aluno['id']) }}" class="inline">
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Aplicar treino ao aluno
+      </button>
+    </form>
+  </div>
+  {% else %}
+  <div class="empty-state"><p>Cadastre os parâmetros para gerar a prévia.</p></div>
+  {% endif %}
+</section>
+
+<section class="card" style="margin-top:16px;">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-weight"/></svg>Biblioteca de exercícios</h3>
+    <button class="btn ghost small" onclick="document.getElementById('form-novo-exercicio').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo exercício
+    </button>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Exercício</th>
+        <th>Grupo</th>
+        <th>Escopo</th>
+        <th>Séries</th>
+        <th>Repetições</th>
+        <th>Descanso</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in lib %}
+      <tr>
+        <td class="strong">{{ e['nome'] }}</td>
+        <td><span class="chip">{{ e['grupo'] }}</span></td>
+        <td>{{ 'Grande' if e['grande'] else 'Isolador' }}</td>
+        <td class="num">{{ e['series'] }}</td>
+        <td class="num">{{ e['repeticoes'] }}</td>
+        <td class="num">{{ e['descanso'] }}</td>
+        <td class="actions-cell">
+          <form method="post" action="{{ url_for('excluir_exercicio_padrao', ex_id=e['id']) }}" class="confirmar" data-confirm="Remover este exercício da biblioteca?">
+            <input type="hidden" name="aluno_id" value="{{ aluno['id'] }}">
+            <button type="submit" class="btn ghost danger small">Remover</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">Nenhum exercício na biblioteca.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<dialog id="form-novo-exercicio" class="modal">
+  <form method="post" action="{{ url_for('novo_exercicio_padrao') }}">
+    <input type="hidden" name="aluno_id" value="{{ aluno['id'] }}">
+    <div class="modal-head">
+      <h2>Novo exercício</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-novo-exercicio').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label>Nome *</label><input name="nome" required placeholder="Ex: Elevação lateral"></div>
+    <div class="field">
+      <label>Grupo muscular</label>
+      <select name="grupo">
+        {% for g in GRUPOS_LIB %}
+        <option value="{{ g }}">{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Séries</label><input type="number" min="1" max="5" name="series" value="2"></div>
+      <div class="field"><label>Repetições</label><input name="repeticoes" value="10-12"></div>
+      <div class="field"><label>Descanso</label><input name="descanso" value="90s"></div>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" name="grande" value="1"> Exercício grande (músculo ênfase principal)</label>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-novo-exercicio').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Adicionar
+      </button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

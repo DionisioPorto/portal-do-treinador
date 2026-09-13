@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Treino · {{ aluno['nome'] }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="print">
+  <div class="no-print print-bar">
+    <button class="btn primary" onclick="window.print()">
+      <svg class="icon"><use href="#i-printer"/></svg>Imprimir / Salvar PDF
+    </button>
+    <button class="btn ghost" onclick="history.back()">
+      <svg class="icon"><use href="#i-arLeft"/></svg>Voltar
+    </button>
+  </div>
+
+  <div class="print-sheet">
+    <header class="print-brand">
+      <div class="print-brand-name">PORTO CONSULTORIA LTDA</div>
+      <div class="print-brand-doc">Treinamento e nutrição personalizados</div>
+    </header>
+
+    <div class="print-head">
+      <h1 style="font-size:24px;">Plano de treino</h1>
+      <div style="text-align:right;">
+        <div class="strong">{{ aluno['nome'] }}</div>
+        <div class="muted small">{{ aluno['objetivo'] or '' }}</div>
+        {% if aluno['plano'] %}<div class="muted small">{{ aluno['plano'] }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% for t in treinos %}
+    <section class="print-block">
+      <h2>
+        {{ t['nome'] }}
+        {% if t['dia_semana'] %}<span class="muted" style="font-weight:600;">· {{ t['dia_semana'] }}</span>{% endif %}
+      </h2>
+      {% if t['notas'] %}<p class="muted small" style="margin-top:-6px;">{{ t['notas'] }}</p>{% endif %}
+      <table class="table">
+        <thead>
+          <tr><th>Exercício</th><th>Séries</th><th>Repetições</th><th>Carga</th><th>Descanso</th></tr>
+        </thead>
+        <tbody>
+          {% for e in exercicios.get(t['id'], []) %}
+          <tr>
+            <td>
+              <div class="strong">{{ e['nome'] }}</div>
+              {% if e['grupo'] %}<div class="muted small">{{ e['grupo'] }}</div>{% endif %}
+            </td>
+            <td>{{ e['series'] or '—' }}</td>
+            <td>{{ e['repeticoes'] or '—' }}</td>
+            <td>{{ e['carga'] or '—' }}</td>
+            <td>{{ e['descanso'] or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% else %}
+    <p class="muted">Nenhum treino cadastrado para este aluno.</p>
+    {% endfor %}
+  </div>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<section class="card aluno-cabecalho">
+  <div class="aluno-cabecalho-info">
+    <span class="avatar big">{{ iniciais(aluno['nome']) }}</span>
+    <div style="min-width:0;">
+      <div class="aluno-nome-lg">{{ aluno['nome'] }}</div>
+      <div class="aluno-sub-lg">
+        {% if aluno['objetivo'] %}{{ aluno['objetivo'] }}{% else %}Sem objetivo definido{% endif %}
+      </div>
+      <div class="aluno-tags">
+        {% if aluno['plano'] %}<span class="chip">Plano: <strong>{{ aluno['plano'] }}</strong></span>{% endif %}
+        <span class="chip">Mensalidade: <strong>{{ brl(aluno['mensalidade']) }}</strong></span>
+        <span class="chip">Vencimento: dia <strong>{{ aluno['dia_vencimento'] }}</strong></span>
+      </div>
+    </div>
+  </div>
+  <div class="resumo-cards">
+    <button class="btn ghost small" onclick="document.getElementById('form-editar-aluno').showModal()">
+      <svg class="icon"><use href="#i-pencil"/></svg>Editar aluno
+    </button>
+    <form method="post" action="{{ url_for('excluir_aluno', aluno_id=aluno['id']) }}" class="confirmar inline" data-confirm="Excluir este aluno e todos os seus dados?">
+      <button type="submit" class="btn ghost danger small">
+        <svg class="icon"><use href="#i-trash"/></svg>Excluir
+      </button>
+    </form>
+  </div>
+</section>
+
+<div class="aba-nav">
+  <a href="{{ url_for('gerar_plano', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'gerar' }}">
+    <svg class="icon"><use href="#i-zap"/></svg>Assistente
+  </a>
+  <a href="{{ url_for('treino', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'treino' }}">
+    <svg class="icon"><use href="#i-dumbbell"/></svg>Treino
+  </a>
+  <a href="{{ url_for('dieta', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'dieta' }}">
+    <svg class="icon"><use href="#i-utensils"/></svg>Dieta
+  </a>
+  <a href="{{ url_for('progresso', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'progresso' }}">
+    <svg class="icon"><use href="#i-trending"/></svg>Progresso
+  </a>
+  <a href="{{ url_for('acompanhamento', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'acompanhamento' }}">
+    <svg class="icon"><use href="#i-activity"/></svg>Acompanhamento
+  </a>
+  <a href="{{ url_for('financeiro_aluno', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'financeiro' }}">
+    <svg class="icon"><use href="#i-dollar"/></svg>Financeiro
+  </a>
+</div>
+
+<dialog id="form-editar-aluno" class="modal">
+  <form method="post" action="{{ url_for('editar_aluno', aluno_id=aluno['id']) }}">
+    <input type="hidden" name="voltar" value="{{ request.path }}">
+    <div class="modal-head">
+      <h2>Editar aluno</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-editar-aluno').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field">
+      <label for="e-nome">Nome *</label>
+      <input type="text" id="e-nome" name="nome" value="{{ aluno['nome'] or '' }}" required>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-telefone">Telefone</label>
+        <input type="text" id="e-telefone" name="telefone" value="{{ aluno['telefone'] or '' }}">
+      </div>
+      <div class="field">
+        <label for="e-nascimento">Nascimento</label>
+        <input type="date" id="e-nascimento" name="nascimento" value="{{ aluno['nascimento'] or '' }}">
+      </div>
+    </div>
+    <div class="field">
+      <label for="e-objetivo">Objetivo</label>
+      <input type="text" id="e-objetivo" name="objetivo" value="{{ aluno['objetivo'] or '' }}">
+    </div>
+    <div class="field">
+      <label for="e-plano">Plano</label>
+      <input type="text" id="e-plano" name="plano" value="{{ aluno['plano'] or '' }}">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-mensalidade">Mensalidade (R$)</label>
+        <input type="number" step="0.01" id="e-mensalidade" name="mensalidade" value="{{ aluno['mensalidade'] or 120 }}">
+      </div>
+      <div class="field">
+        <label for="e-vencimento">Dia do vencimento</label>
+        <input type="number" min="1" max="31" id="e-vencimento" name="dia_vencimento" value="{{ aluno['dia_vencimento'] or 1 }}">
+      </div>
+    </div>
+    <div class="field">
+      <label for="e-observacoes">Observações</label>
+      <textarea id="e-observacoes" name="observacoes" rows="3">{{ aluno['observacoes'] or '' }}</textarea>
+    </div>
+
+    <div class="card-head" style="margin-top:8px;justify-content:flex-start;">
+      <h3><svg class="icon"><use href="#i-zap"/></svg>Assistente de plano</h3>
+    </div>
+    <div class="grid-form">
+      <div class="field"><label for="e-altura">Altura (cm)</label><input type="number" step="0.1" id="e-altura" name="altura_cm" value="{{ aluno['altura_cm'] or '' }}" placeholder="175"></div>
+      <div class="field"><label for="e-peso">Peso atual (kg)</label><input type="number" step="0.1" id="e-peso" name="peso_atual" value="{{ aluno['peso_atual'] or '' }}" placeholder="72"></div>
+      <div class="field"><label for="e-fator">Fator de atividade</label><input type="number" step="0.05" id="e-fator" name="fator_atividade" value="{{ aluno['fator_atividade'] or 1.55 }}"></div>
+      <div class="field"><label for="e-sexo">Fórmula</label>
+        <select id="e-sexo" name="sexo_formula">
+          <option value="M" {{ 'selected' if aluno['sexo_formula'] == 'M' else '' }}>Masculina (padrão TH)</option>
+          <option value="F" {{ 'selected' if aluno['sexo_formula'] == 'F' else '' }}>Feminina</option>
+        </select>
+      </div>
+      <div class="field"><label for="e-objmeta">Objetivo da meta</label>
+        <select id="e-objmeta" name="objetivo_meta">
+          {% for k, v in OBJETIVOS_META.items() %}
+          <option value="{{ k }}" {{ 'selected' if aluno['objetivo_meta'] == k else '' }}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field"><label for="e-ajuste">Ajuste (%)</label><input type="number" id="e-ajuste" name="ajuste_meta" value="{{ aluno['ajuste_meta'] or '' }}" placeholder="-10"></div>
+      <div class="field"><label for="e-proteina">Proteína (g/kg)</label><input type="number" step="0.1" id="e-proteina" name="proteina_kg" value="{{ aluno['proteina_kg'] or 2.0 }}"></div>
+      <div class="field"><label for="e-dias">Dias de treino</label>
+        <select id="e-dias" name="dias_treino">
+          {% for d in [3, 4, 5, 6] %}
+          <option value="{{ d }}" {{ 'selected' if aluno['dias_treino'] == d else '' }}>{{ d }} dias</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" name="foco_gluteo" value="1" {{ 'checked' if aluno['foco_gluteo'] else '' }}> Foco em glúteos também</label>
+    </div>
+    <div class="field">
+      <label for="e-rotina">Rotina do aluno</label>
+      <textarea id="e-rotina" name="rotina" rows="4" placeholder="Ex: Acordo 6h, café 7h, almoço 12h30, jantar 20h30. Treino seg/qua/sex.">{{ aluno['rotina'] or '' }}</textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-editar-aluno').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar alterações
+      </button>
+    </div>
+  </form>
+</dialog>

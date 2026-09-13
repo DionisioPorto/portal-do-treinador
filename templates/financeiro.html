@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Financeiro · Portal do Treinador{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="head-title">
+    <span class="page-title-ico"><svg class="icon"><use href="#i-dollar"/></svg></span>
+    <div>
+      <h1>Financeiro</h1>
+      <div class="sub">Acompanhe mensalidades e cobranças</div>
+    </div>
+  </div>
+  <form method="get" action="{{ url_for('financeiro') }}" class="month-picker">
+    <label for="mes-sel">Mês de referência</label>
+    <input type="month" id="mes-sel" name="m" value="{{ mes }}" onchange="this.form.submit()">
+  </form>
+</div>
+
+<div class="cards-grid">
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-receipt"/></svg></div>
+    <div class="stat-label">Esperado</div>
+    <div class="stat-value">{{ brl(esperado) }}</div>
+    <div class="stat-sub">todas as mensalidades</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon green"><svg class="icon"><use href="#i-check-circle"/></svg></div>
+    <div class="stat-label">Recebido</div>
+    <div class="stat-value">{{ brl(recebido) }}</div>
+    {% set pct = (recebido / esperado * 100) if esperado else 0 %}
+    <div class="stat-sub">{{ pct | round | int }}% do esperado</div>
+    <div class="progress {{ 'ok' if pct >= 80 else '' }}">
+      <div style="width: {{ pct | round | int }}%"></div>
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon amber"><svg class="icon"><use href="#i-alert"/></svg></div>
+    <div class="stat-label">Pendente</div>
+    <div class="stat-value">{{ brl(pendente) }}</div>
+    <div class="stat-sub">ainda não pagos</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon {{ 'red' if atrasados_n else 'green' }}"><svg class="icon"><use href="#i-alert"/></svg></div>
+    <div class="stat-label">Atrasados</div>
+    <div class="stat-value {{ 'danger-text' if atrasados_n else '' }}">{{ atrasados_n }}</div>
+    <div class="stat-sub">{{ 'com vencimento passado' if atrasados_n else 'dentro do prazo' }}</div>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-receipt"/></svg>Mensalidades · {{ mes_nome }}</h3>
+  </div>
+  {% if rows %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Aluno</th>
+        <th>Vencimento</th>
+        <th class="num">Valor</th>
+        <th>Status</th>
+        <th>Data de pagamento</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>
+          <div style="display:flex; align-items:center; gap:11px;">
+            <span class="avatar" style="width:34px;height:34px;font-size:12px;border-radius:10px;">{{ iniciais(r['aluno']['nome']) }}</span>
+            <a class="link strong" href="{{ url_for('financeiro_aluno', aluno_id=r['aluno']['id']) }}">{{ r['aluno']['nome'] }}</a>
+          </div>
+        </td>
+        <td class="muted">dia {{ r['aluno']['dia_vencimento'] }}</td>
+        <td class="num strong">{{ brl(r['pag']['valor']) }}</td>
+        <td><span class="badge {{ r['status'] }}">{{ r['status'] }}</span></td>
+        <td class="muted">{{ formatar_data(r['pag']['data_pagamento']) }}</td>
+        <td class="actions-cell">
+          {% if r['status'] == 'pago' %}
+          <form method="post" action="{{ url_for('financeiro_status') }}" class="confirmar inline" data-confirm="Desfazer o pagamento?">
+            <input type="hidden" name="aluno_id" value="{{ r['aluno']['id'] }}">
+            <input type="hidden" name="mes" value="{{ mes }}">
+            <input type="hidden" name="status" value="pendente">
+            <input type="hidden" name="voltar" value="global">
+            <button type="submit" class="btn ghost danger small">
+              <svg class="icon"><use href="#i-x"/></svg>Desfazer
+            </button>
+          </form>
+          {% else %}
+          <form method="post" action="{{ url_for('financeiro_status') }}">
+            <input type="hidden" name="aluno_id" value="{{ r['aluno']['id'] }}">
+            <input type="hidden" name="mes" value="{{ mes }}">
+            <input type="hidden" name="status" value="pago">
+            <input type="hidden" name="voltar" value="global">
+            <button type="submit" class="btn primary small">
+              <svg class="icon"><use href="#i-check"/></svg>Confirmar pagamento
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-ico"><svg class="icon"><use href="#i-users"/></svg></div>
+    <h3>Nenhum aluno cadastrado</h3>
+    <p>Cadastre alunos para acompanhar as mensalidades.</p>
+  </div>
+  {% endif %}
+</section>
+
+<div class="card note-card">
+  <svg class="icon"><use href="#i-info"/></svg>
+  <p>Os registros do mês são criados automaticamente como <strong>pendente</strong>. Ao confirmar o pagamento, a data de hoje é registrada.
+  Vencimentos do dia já ultrapassados aparecem como <strong>atrasado</strong>.</p>
+</div>
+{% endblock %}

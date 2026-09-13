@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ aluno['nome'] }} · Acompanhamento · Portal{% endblock %}
+{% block content %}
+{% include "_aluno_cabecalho.html" %}
+
+<div class="page-head">
+  <div>
+    <h2 style="font-size:19px;">Acompanhamento</h2>
+    <div class="muted small">Check-ins: dores, energia, sono, peso e dieta</div>
+  </div>
+  <div class="head-actions">
+    <button class="btn primary" onclick="document.getElementById('form-checkin').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo check-in
+    </button>
+  </div>
+</div>
+
+{% if checkins %}
+<div class="checkins-list">
+  {% for c in checkins %}
+  <div class="card checkin">
+    <div class="checkin-head">
+      <div class="checkin-date">
+        <svg class="icon"><use href="#i-calendar"/></svg>{{ formatar_data(c['data']) }}
+      </div>
+      <form method="post" action="{{ url_for('excluir_checkin', checkin_id=c['id']) }}" class="confirmar inline" data-confirm="Excluir este check-in?">
+        <button type="submit" class="btn ghost danger small">
+          <svg class="icon"><use href="#i-trash"/></svg>
+        </button>
+      </form>
+    </div>
+    <div class="chips-row">
+      {% if c['peso'] is not none %}
+      <span class="chip"><svg class="icon"><use href="#i-weight"/></svg>Peso: <strong>{{ c['peso'] }} kg</strong></span>
+      {% endif %}
+      {% if c['energia'] is not none %}
+      <span class="chip"><svg class="icon"><use href="#i-zap"/></svg>Energia: <strong>{{ c['energia'] }}/5</strong></span>
+      {% endif %}
+      {% if c['kcal_consumidas'] is not none %}
+      <span class="chip"><svg class="icon"><use href="#i-flame"/></svg>kcal: <strong>{{ c['kcal_consumidas'] }}</strong></span>
+      {% endif %}
+      {% if c['adesao'] is not none %}
+      <span class="chip"><svg class="icon"><use href="#i-check-circle"/></svg>Adesão: <strong>{{ c['adesao'] }}%</strong></span>
+      {% endif %}
+      {% if c['sono'] %}
+      <span class="chip"><svg class="icon"><use href="#i-moon"/></svg>Sono: {{ c['sono'] }}</span>
+      {% endif %}
+    </div>
+    {% if c['dores'] %}
+    <p><span class="label"><svg class="icon" style="width:14px;height:14px;vertical-align:-2px;"><use href="#i-heart"/></svg> Dores:</span> {{ c['dores'] }}</p>
+    {% endif %}
+    {% if c['observacoes'] %}
+    <p><span class="label">Obs.:</span> {{ c['observacoes'] }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+  <div class="empty-ico"><svg class="icon"><use href="#i-activity"/></svg></div>
+  <h3>Nenhum check-in ainda</h3>
+  <p>Registre o primeiro para começar a acompanhar a evolução.</p>
+  <button class="btn primary" onclick="document.getElementById('form-checkin').showModal()">
+    <svg class="icon"><use href="#i-plus"/></svg>Novo check-in
+  </button>
+</div>
+{% endif %}
+
+<dialog id="form-checkin" class="modal">
+  <form method="post" action="{{ url_for('novo_checkin', aluno_id=aluno['id']) }}">
+    <div class="modal-head">
+      <h2>Novo check-in</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-checkin').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label>Data</label><input type="date" name="data" value="{{ hoje }}"></div>
+    <div class="field-row">
+      <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="peso" placeholder="72.5"></div>
+      <div class="field"><label>Energia (1-5)</label><input type="number" min="1" max="5" name="energia" placeholder="4"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>kcal consumidas</label><input type="number" name="kcal_consumidas" placeholder="2400"></div>
+      <div class="field"><label>Adesão à dieta (%)</label><input type="number" min="0" max="100" name="adesao" placeholder="85"></div>
+    </div>
+    <div class="field"><label>Dores</label><input name="dores" placeholder="Ex: dor leve no ombro direito"></div>
+    <div class="field"><label>Sono</label><input name="sono" placeholder="Ex: dormiu 7h, acordou cansado"></div>
+    <div class="field"><label>Observações</label><textarea name="observacoes" rows="2" placeholder="Semana tranquila, bom rendimento"></textarea></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-checkin').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar check-in
+      </button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

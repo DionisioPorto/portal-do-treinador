@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}{{ aluno['nome'] }} · Progresso · Portal{% endblock %}
+{% block content %}
+{% include "_aluno_cabecalho.html" %}
+
+<div class="page-head">
+  <div>
+    <h2 style="font-size:19px;">Progresso</h2>
+    <div class="muted small">Fotos, métricas e a evolução do peso</div>
+  </div>
+  <div class="head-actions">
+    <button class="btn primary" onclick="document.getElementById('form-foto').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Adicionar foto
+    </button>
+  </div>
+</div>
+
+<div class="cards-grid">
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-weight"/></svg></div>
+    <div class="stat-label">Peso atual</div>
+    <div class="stat-value">
+      {% if peso_atual %}{{ peso_atual }}{% else %}—{% endif %}
+      {% if peso_atual %}<span class="stat-un">kg</span>{% endif %}
+    </div>
+    {% if tendencia %}
+    <div class="stat-sub {{ tendencia['classe'] }}">
+      <strong>{{ tendencia['label'] }}</strong> desde a 1ª medição
+      {% if tendencia['periodo'] %}({{ tendencia['periodo'] }} dias){% endif %}
+    </div>
+    {% else %}
+    <div class="stat-sub muted">registre o peso para ver a variação</div>
+    {% endif %}
+  </div>
+
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-trending"/></svg></div>
+    <div class="stat-label">Tendência</div>
+    <div class="stat-value">
+      {% if tendencia %}
+      <span class="badge {{ tendencia['classe'] }}">{{ tendencia['texto'] }}</span>
+      {% else %}
+      <span class="badge pendente">sem dados</span>
+      {% endif %}
+    </div>
+    {% if tendencia %}
+    <div class="stat-sub muted">1ª: {{ formatar_data(serie[0]['data']) }} · {{ serie[0]['peso'] }} kg → {{ serie[-1]['peso'] }} kg</div>
+    {% else %}
+    <div class="stat-sub muted">o gráfico usa os pesos registrados nos check-ins</div>
+    {% endif %}
+  </div>
+
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-activity"/></svg></div>
+    <div class="stat-label">IMC</div>
+    <div class="stat-value">{% if imc %}{{ '%.1f' | format(imc) }}{% else %}—{% endif %}</div>
+    <div class="stat-sub muted">
+      {% if imc %}
+        {% if imc < 18.5 %}abaixo do peso{% elif imc < 25 %}peso normal{% elif imc < 30 %}sobrepeso{% else %}obesidade{% endif %}
+        {% if altura %}· {{ altura }} cm{% endif %}
+      {% else %}
+        precisa de peso e altura
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-flame"/></svg></div>
+    <div class="stat-label">Meta diária</div>
+    <div class="stat-value">{{ plano['meta_kcal']|int }} <span class="stat-un">kcal</span></div>
+    <div class="stat-sub muted">P {{ plano['proteina']|int }} · C {{ plano['carbo']|int }} · G {{ plano['gordura']|int }} g</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h3>Evolução do peso</h3>
+      <span class="muted small">Série registrada nos check-ins{% if tendencia and tendencia['periodo'] %} · {{ tendencia['periodo'] }} dias{% endif %}</span>
+    </div>
+    {% if tendencia %}
+    <span class="badge {{ tendencia['classe'] }}">{{ tendencia['texto'] }} {{ tendencia['label'] }}</span>
+    {% endif %}
+  </div>
+
+  {% if grafico %}
+  <div class="grafico-wrap">
+    <svg viewBox="0 0 {{ grafico['w'] }} {{ grafico['h'] }}" role="img" aria-label="Gráfico do peso do aluno">
+      <line class="g-stroke" x1="{{ grafico['m'] }}" y1="{{ grafico['yb'] }}" x2="{{ grafico['w'] - grafico['m'] }}" y2="{{ grafico['yb'] }}"></line>
+      <text class="g-label" x="{{ grafico['m'] - 6 }}" y="{{ grafico['yb'] + 4 }}" text-anchor="end">{{ grafico['min'] }}</text>
+      <text class="g-label" x="{{ grafico['m'] - 6 }}" y="{{ grafico['m'] + 4 }}" text-anchor="end">{{ grafico['max'] }}</text>
+      {% if grafico['n'] > 1 %}
+      <polygon class="g-area" points="{{ grafico['area'] }}"></polygon>
+      <polyline class="g-line" points="{{ grafico['line'] }}"></polyline>
+      <text class="g-label" x="{{ grafico['pontos'][0]['x'] }}" y="{{ grafico['h'] - 8 }}" text-anchor="{{ 'end' if grafico['n'] == 1 else 'middle' }}">
+        {{ formatar_data(grafico['pontos'][0]['data']) }}
+      </text>
+      <text class="g-label" x="{{ grafico['pontos'][-1]['x'] }}" y="{{ grafico['h'] - 8 }}" text-anchor="middle">
+        {{ formatar_data(grafico['pontos'][-1]['data']) }}
+      </text>
+      {% endif %}
+      {% for p in grafico['pontos'] %}
+      <g>
+        <circle class="g-dot" cx="{{ p['x'] }}" cy="{{ p['y'] }}" r="4">
+          <title>{{ formatar_data(p['data']) }} · {{ p['peso'] }} kg</title>
+        </circle>
+        <text class="g-peso" x="{{ p['x'] }}" y="{{ p['y'] - 10 }}" text-anchor="middle">{{ p['peso'] }}</text>
+      </g>
+      {% endfor %}
+    </svg>
+  </div>
+  <div class="muted small" style="margin-top:8px;">
+    {% if tendencia %}
+    O aluno {{ tendencia['texto'] }} <strong>{{ tendencia['label'] }}</strong> no período acompanhado.
+    {% else %}
+    Uma só medição por enquanto — registre o peso nos próximos check-ins para traçar a evolução.
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card empty-state" style="box-shadow:none;">
+    <div class="empty-ico"><svg class="icon"><use href="#i-trending"/></svg></div>
+    <h3>Sem medições de peso</h3>
+    <p>Registre o peso em um check-in para o gráfico começar a ser montado.</p>
+    <a class="btn primary" href="{{ url_for('acompanhamento', aluno_id=aluno['id']) }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Registrar peso
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h3>Fotos de progresso</h3>
+      <span class="muted small">Compare a evolução visual ao longo do tempo</span>
+    </div>
+    <button class="btn ghost small" onclick="document.getElementById('form-foto').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Adicionar foto
+    </button>
+  </div>
+
+  {% if fotos %}
+  <div class="fotos-grid">
+    {% for f in fotos %}
+    <figure class="foto-card">
+      <img src="{{ url_for('foto_arquivo', aluno_id=aluno['id'], arquivo=f['arquivo']) }}" alt="Foto de {{ formatar_data(f['data']) }}" loading="lazy">
+      <figcaption class="foto-info">
+        <div class="foto-info-line">
+          <strong>{{ formatar_data(f['data']) }}</strong>
+          {% if f['peso'] is not none %}<span class="chip">{{ f['peso'] }} kg</span>{% endif %}
+        </div>
+        {% if f['legenda'] %}<div class="muted small">{{ f['legenda'] }}</div>{% endif %}
+        <form method="post" action="{{ url_for('excluir_foto', foto_id=f['id']) }}" class="inline confirmar" data-confirm="Excluir esta foto?">
+          <button type="submit" class="btn ghost danger small" title="Excluir foto">
+            <svg class="icon"><use href="#i-trash"/></svg>
+          </button>
+        </form>
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty-state" style="box-shadow:none;">
+    <div class="empty-ico"><svg class="icon"><use href="#i-camera"/></svg></div>
+    <h3>Nenhuma foto ainda</h3>
+    <p>Adicione fotos ao longo do tempo para acompanhar a evolução.</p>
+    <button class="btn primary" onclick="document.getElementById('form-foto').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Adicionar foto
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<dialog id="form-foto" class="modal">
+  <form method="post" action="{{ url_for('adicionar_foto', aluno_id=aluno['id']) }}" enctype="multipart/form-data">
+    <div class="modal-head">
+      <h2>Adicionar foto de progresso</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-foto').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field">
+      <label>Foto (JPG, PNG, WEBP ou GIF · até 6 MB)</label>
+      <input type="file" name="foto" accept="image/*" required>
+    </div>
+    <div class="field"><label>Data</label><input type="date" name="data" value="{{ hoje }}"></div>
+    <div class="field"><label>Peso do dia (kg)</label><input type="number" step="0.1" name="peso" placeholder="Opcional"></div>
+    <div class="field"><label>Legenda</label><input name="legenda" placeholder="Ex: final do mês 2"></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-foto').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar foto
+      </button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

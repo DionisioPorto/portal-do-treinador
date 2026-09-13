@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Início · Portal do Treinador{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="head-title">
+    <span class="page-title-ico"><svg class="icon"><use href="#i-trending"/></svg></span>
+    <div>
+      <h1>Visão geral</h1>
+      <div class="sub">{{ mes_nome | capitalize }} · receitas e alunos em um só lugar</div>
+    </div>
+  </div>
+  <a class="btn primary" href="{{ url_for('alunos') }}">
+    <svg class="icon"><use href="#i-users"/></svg>Ver alunos
+  </a>
+</div>
+
+<div class="cards-grid">
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-users"/></svg></div>
+    <div class="stat-label">Alunos ativos</div>
+    <div class="stat-value">{{ total_alunos }}</div>
+    <div class="stat-sub">{{ atrasados | length }} com cobrança em atraso</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-dollar"/></svg></div>
+    <div class="stat-label">Receita esperada</div>
+    <div class="stat-value">{{ brl(receita_esperada) }}</div>
+    <div class="stat-sub">mensalidades de {{ mes_nome }}</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon green"><svg class="icon"><use href="#i-check-circle"/></svg></div>
+    <div class="stat-label">Recebido no mês</div>
+    <div class="stat-value">{{ brl(receita_recebida) }}</div>
+    {% set pct = (receita_recebida / receita_esperada * 100) if receita_esperada else 0 %}
+    <div class="stat-sub">{{ pct | round | int }}% do esperado</div>
+    <div class="progress {{ 'ok' if pct >= 80 else '' }}">
+      <div style="width: {{ pct | round | int }}%"></div>
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon {{ 'red' if atrasados else 'green' }}"><svg class="icon"><use href="#i-alert"/></svg></div>
+    <div class="stat-label">Cobranças atrasadas</div>
+    <div class="stat-value {{ 'danger-text' if atrasados else '' }}">{{ atrasados | length }}</div>
+    <div class="stat-sub">{{ 'precisa cobrar' if atrasados else 'tudo em dia' }}</div>
+  </div>
+</div>
+
+<div class="columns">
+  <section class="card">
+    <div class="card-head">
+      <h3><svg class="icon"><use href="#i-receipt"/></svg>Cobranças atrasadas</h3>
+      <a class="link small" href="{{ url_for('financeiro') }}">Ir para financeiro</a>
+    </div>
+    {% if atrasados %}
+    <table class="table">
+      <tbody>
+        {% for a in atrasados %}
+        <tr>
+          <td style="width:1%; padding-right:6px;">
+            <span class="avatar">{{ iniciais(a['nome']) }}</span>
+          </td>
+          <td>
+            <a class="link strong" href="{{ url_for('financeiro_aluno', aluno_id=a['id']) }}">{{ a['nome'] }}</a>
+            <div class="muted small">vencimento dia {{ a['dia_vencimento'] }}</div>
+          </td>
+          <td><span class="badge atrasado">atrasado</span></td>
+          <td class="actions-cell">
+            <form method="post" action="{{ url_for('financeiro_status') }}">
+              <input type="hidden" name="aluno_id" value="{{ a['id'] }}">
+              <input type="hidden" name="mes" value="{{ mes_atual() }}">
+              <input type="hidden" name="status" value="pago">
+              <input type="hidden" name="voltar" value="global">
+              <button type="submit" class="btn primary small">
+                <svg class="icon"><use href="#i-check"/></svg>Pagar
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-ico"><svg class="icon"><use href="#i-check-circle"/></svg></div>
+      <h3>Tudo em dia</h3>
+      <p>Nenhuma cobrança atrasada neste mês.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3><svg class="icon"><use href="#i-activity"/></svg>Últimos check-ins</h3>
+      <a class="link small" href="{{ url_for('alunos') }}">Ver alunos</a>
+    </div>
+    {% if checkins %}
+    <table class="table">
+      <tbody>
+        {% for c in checkins %}
+        <tr>
+          <td style="width:1%; padding-right:6px;">
+            <span class="avatar">{{ iniciais(c['aluno_nome']) }}</span>
+          </td>
+          <td>
+            <a class="link strong" href="{{ url_for('acompanhamento', aluno_id=c['aluno_id']) }}">{{ c['aluno_nome'] }}</a>
+            <div class="muted small">{{ formatar_data(c['data']) }}</div>
+          </td>
+          {% if c['peso'] is not none %}
+          <td class="right muted strong" style="white-space:nowrap;">{{ c['peso'] }} kg</td>
+          {% elif c['adesao'] is not none %}
+          <td class="right muted strong" style="white-space:nowrap;">Adesão {{ c['adesao'] }}%</td>
+          {% else %}
+          <td></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-ico"><svg class="icon"><use href="#i-activity"/></svg></div>
+      <h3>Sem check-ins</h3>
+      <p>Registre o acompanhamento dos alunos.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

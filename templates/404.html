@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Página não encontrada · Portal{% endblock %}
+{% block content %}
+<div class="card empty-state">
+  <div class="empty-ico"><svg class="icon"><use href="#i-alert"/></svg></div>
+  <h3>Página não encontrada</h3>
+  <p>O endereço que você acessou não existe.</p>
+  <a class="btn primary" href="{{ url_for('dashboard') }}">
+    <svg class="icon"><use href="#i-arLeft"/></svg>Voltar ao início
+  </a>
+</div>
+{% endblock %}

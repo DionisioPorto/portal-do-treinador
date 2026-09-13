@@ -1,0 +1,5 @@
+dados.db
+dados.db.bak
+uploads/
+__pycache__/
+*.pyc
