@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relatório · {{ mes_nome }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="print">
+  <div class="no-print print-bar">
+    <button class="btn primary" onclick="window.print()">
+      <svg class="icon"><use href="#i-printer"/></svg>Imprimir / Salvar PDF
+    </button>
+    <button class="btn ghost" onclick="history.back()">
+      <svg class="icon"><use href="#i-arLeft"/></svg>Voltar
+    </button>
+  </div>
+
+  <div class="print-sheet">
+    <header class="print-brand">
+      <div class="print-brand-name">PORTO CONSULTORIA LTDA</div>
+      <div class="print-brand-doc">Treinamento e nutrição personalizados</div>
+    </header>
+
+    <div class="print-head">
+      <h1 style="font-size:24px;">Relatório financeiro</h1>
+      <div style="text-align:right;">
+        <div class="strong">{{ mes_nome }}</div>
+        <div class="muted small">Gerado em {{ formatar_data(hoje) }}</div>
+      </div>
+    </div>
+
+    <section class="print-block">
+      <table class="table">
+        <tbody>
+          <tr>
+            <td><span class="label">Entradas no mês</span></td>
+            <td class="num strong">{{ brl(entradas_mes_atual) }}</td>
+            <td><span class="label">Despesas no mês</span></td>
+            <td class="num strong">{{ brl(saidas_mes_atual) }}</td>
+          </tr>
+          <tr>
+            <td><span class="label">Saldo do mês</span></td>
+            <td class="num strong {{ 'green' if saldo_mes >= 0 else 'danger-text' }}">{{ brl(saldo_mes) }}</td>
+            <td><span class="label">Saldo (6 meses)</span></td>
+            <td class="num strong {{ 'green' if saldo_geral >= 0 else 'danger-text' }}">{{ brl(saldo_geral) }}</td>
+          </tr>
+          <tr>
+            <td><span class="label">Alunos ativos</span></td>
+            <td class="num strong">{{ alunos_ativos }} <span class="muted small">(+{{ novos_mes }} no mês)</span></td>
+            <td><span class="label">Ticket médio</span></td>
+            <td class="num strong">{{ brl(ticket_medio) }}</td>
+          </tr>
+          <tr>
+            <td><span class="label">Leads no mês</span></td>
+            <td class="num strong">{{ leads_mes }} <span class="muted small">({{ em_aberto }} em aberto)</span></td>
+            <td><span class="label">Conversão</span></td>
+            <td class="num strong">{{ "%.1f"|format(taxa_conversao) }}% <span class="muted small">({{ convertidos }}/{{ total_leads }})</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="print-block">
+      <h2>Entradas × despesas · últimos 6 meses</h2>
+      <div style="overflow-x:auto;">
+        <svg viewBox="0 0 {{ grafico['w'] }} {{ grafico['h'] }}" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:700px;height:auto;">
+          {% set gap = (grafico['w'] - 2 * grafico['m']) / 6 %}
+          {% for i in range(6) %}
+          <text x="{{ grafico['m'] + i * gap + gap / 2 }}" y="{{ grafico['base'] + 24 }}" text-anchor="middle" class="g-label" style="fill:#000;">{{ grafico['rotulos'][i] }}</text>
+          {% endfor %}
+          <line x1="{{ grafico['m'] }}" y1="{{ grafico['base'] }}" x2="{{ grafico['w'] - grafico['m'] }}" y2="{{ grafico['base'] }}" stroke="rgba(0,0,0,0.35)" stroke-width="1"/>
+          {% for b in grafico['entradas'] %}
+          <rect x="{{ b['x'] }}" y="{{ b['y'] }}" width="{{ b['w'] }}" height="{{ b['h'] }}" rx="3" fill="#2c9e63"/>
+          {% if b['v'] %}<text x="{{ b['x'] + b['w'] / 2 }}" y="{{ b['y'] - 6 }}" text-anchor="middle" class="g-label" font-weight="700" style="fill:#000;">{{ brl(b['v']).replace('R$ ', '').replace(',', '.') }}</text>{% endif %}
+          {% endfor %}
+          {% for b in grafico['saidas'] %}
+          <rect x="{{ b['x'] }}" y="{{ b['y'] }}" width="{{ b['w'] }}" height="{{ b['h'] }}" rx="3" fill="#d64550"/>
+          {% if b['v'] %}<text x="{{ b['x'] + b['w'] / 2 }}" y="{{ b['y'] - 6 }}" text-anchor="middle" class="g-label" font-weight="700" style="fill:#000;">{{ brl(b['v']).replace('R$ ', '').replace(',', '.') }}</text>{% endif %}
+          {% endfor %}
+        </svg>
+      </div>
+      <div class="muted small">■ Entradas (verde) · ■ Despesas (vermelho)</div>
+    </section>
+
+    {% if donut %}
+    <section class="print-block">
+      <h2>Despesas por categoria</h2>
+      <table class="table">
+        <thead><tr><th>Categoria</th><th class="num">Valor</th><th class="num">%</th></tr></thead>
+        <tbody>
+          {% for s in donut['segs'] %}
+          <tr>
+            <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ s['color'] }};margin-right:8px;"></span>{{ s['cat'] }}</td>
+            <td class="num strong">{{ brl(s['s']) }}</td>
+            <td class="num">{{ "%.1f"|format(s['frac']) }}%</td>
+          </tr>
+          {% endfor %}
+          <tr><td class="strong">Total</td><td class="num strong">{{ brl(donut['total']) }}</td><td></td></tr>
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if despesas %}
+    <section class="print-block">
+      <h2>Despesas</h2>
+      <table class="table">
+        <thead>
+          <tr><th>Descrição</th><th>Categoria</th><th>Data</th><th class="num">Valor</th></tr>
+        </thead>
+        <tbody>
+          {% for d in despesas %}
+          <tr>
+            <td>{{ d['descricao'] }}</td>
+            <td>{{ d['categoria'] or 'Geral' }}</td>
+            <td>{{ formatar_data(d['data']) }}</td>
+            <td class="num strong">{{ brl(d['valor']) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if leads %}
+    <section class="print-block">
+      <h2>Leads</h2>
+      <table class="table">
+        <thead>
+          <tr><th>Nome</th><th>Origem</th><th>Status</th><th class="num">Valor do serviço</th><th>Data</th></tr>
+        </thead>
+        <tbody>
+          {% for l in leads %}
+          <tr>
+            <td>{{ l['nome'] }}</td>
+            <td>{{ l['origem'] or '—' }}</td>
+            <td>{{ l['status'] }}</td>
+            <td class="num strong">{{ brl(l['valor_servico']) }}</td>
+            <td>{{ formatar_data(l['data']) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if top_alunos %}
+    <section class="print-block">
+      <h2>Top alunos por receita</h2>
+      <table class="table">
+        <tbody>
+          {% for t in top_alunos %}
+          <tr><td>{{ t['nome'] }}</td><td class="num strong">{{ brl(t['v']) }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+  </div>
+</body>
+</html>

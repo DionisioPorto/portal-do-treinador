@@ -2091,8 +2091,7 @@ def financeiro():
     )
 
 
-@app.route("/relatorios")
-def relatorios():
+def _relatorio_dados():
     con = get_db()
     meses = ultimos_meses(6)
     mes = mes_atual()
@@ -2145,8 +2144,7 @@ def relatorios():
            WHERE p.status = 'pago' GROUP BY a.id ORDER BY v DESC LIMIT 5"""
     ).fetchall()
 
-    return render_template(
-        "relatorios.html", active="relatorios",
+    return dict(
         mes=mes, mes_nome=mes_label(mes), meses=meses,
         grafico=grafico, donut=donut,
         entradas_mes=entradas_mes, saidas_mes=saidas_mes,
@@ -2156,8 +2154,19 @@ def relatorios():
         leads=leads, total_leads=total_leads, leads_mes=leads_mes,
         convertidos=convertidos, em_contato=em_contato, em_aberto=em_aberto, taxa_conversao=taxa_conversao,
         alunos_ativos=alunos_ativos, novos_mes=novos_mes, ticket_medio=ticket_medio, top_alunos=top_alunos,
-        status_leads=STATUS_LEADS,
     )
+
+
+@app.route("/relatorios")
+def relatorios():
+    dados = _relatorio_dados()
+    return render_template("relatorios.html", active="relatorios", **dados)
+
+
+@app.route("/relatorios/imprimir")
+def imprimir_relatorio():
+    dados = _relatorio_dados()
+    return render_template("imprimir_relatorio.html", **dados)
 
 
 @app.route("/financeiro/despesa/novo", methods=["POST"])

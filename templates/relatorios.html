@@ -13,6 +13,9 @@
     <a class="btn ghost" href="{{ url_for('financeiro') }}">
       <svg class="icon"><use href="#i-dollar"/></svg>Mensalidades
     </a>
+    <a class="btn ghost" target="_blank" href="{{ url_for('imprimir_relatorio') }}">
+      <svg class="icon"><use href="#i-printer"/></svg>Exportar PDF
+    </a>
     <button type="button" class="btn primary" onclick="abrirDespesa()">
       <svg class="icon"><use href="#i-plus"/></svg>Nova despesa
     </button>

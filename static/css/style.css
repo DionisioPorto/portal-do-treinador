@@ -907,6 +907,7 @@ a.strong { font-weight: 600; }
 }
 
 @media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { margin: 12mm 10mm; }
   .no-print { display: none !important; }
   body, .print { background: #fff !important; color: #000 !important; }
