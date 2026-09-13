@@ -1213,6 +1213,7 @@ def seed():
 
 
 with app.app_context():
+    db_antes = DB_PATH.exists()
     init_db()
     migrar()
     seed_library()
@@ -1220,7 +1221,7 @@ with app.app_context():
     atualizar_nutri()
     seed()
     n_alunos = get_db().execute("SELECT COUNT(*) AS n FROM alunos").fetchone()["n"]
-    print(f"[boot] DATA_DIR={DATA_DIR} DB existe={DB_PATH.exists()} alunos={n_alunos}", flush=True)
+    print(f"[boot] DATA_DIR={DATA_DIR.resolve()} banco_ja_existia={db_antes} alunos={n_alunos}", flush=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
