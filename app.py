@@ -161,6 +161,27 @@ CREATE TABLE IF NOT EXISTS fotos_aluno (
     arquivo TEXT NOT NULL,
     criado_em TEXT DEFAULT (datetime('now','localtime'))
 );
+
+CREATE TABLE IF NOT EXISTS despesas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    descricao TEXT NOT NULL,
+    categoria TEXT,
+    valor REAL DEFAULT 0,
+    data TEXT DEFAULT (date('now','localtime')),
+    criado_em TEXT DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    telefone TEXT,
+    origem TEXT,
+    status TEXT DEFAULT 'novo',
+    valor_servico REAL,
+    observacoes TEXT,
+    data TEXT DEFAULT (date('now','localtime')),
+    criado_em TEXT DEFAULT (datetime('now','localtime'))
+);
 """
 
 
@@ -317,6 +338,65 @@ def tendencia_peso(objetivo, primeiro, ultimo):
         classe = "green" if alinhado else "red"
         texto = "desceu" if var < 0 else "subiu"
     return {"variacao": var, "texto": texto, "classe": classe, "label": "%+.1f kg" % var}
+
+
+def ultimos_meses(n=6):
+    """Lista dos últimos n meses no formato YYYY-MM, do mais antigo ao mais novo."""
+    lista = []
+    y, m = datetime.date.today().year, datetime.date.today().month
+    for _ in range(n):
+        lista.append("%04d-%02d" % (y, m))
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return list(reversed(lista))
+
+
+def grafico_barras_mes(rotulos, entradas, saidas):
+    """Prepara um gráfico de barras agrupadas (entradas x saídas) por mês em SVG."""
+    LAR, ALT, M = 660, 260, 46
+    serie = [e for e in entradas] + [s for s in saidas]
+    max_v = max(serie + [1])
+    n = len(rotulos)
+    gap = (LAR - 2 * M) / n
+    bw = min(gap * 0.30, 26)
+    base = ALT - M
+    area = ALT - 2 * M
+    ent, sai = [], []
+    for i, (e, s) in enumerate(zip(entradas, saidas)):
+        x = M + i * gap + gap / 2
+        he = (e / max_v) * area
+        hs = (s / max_v) * area
+        ent.append({"x": round(x - bw - 3, 1), "y": round(base - he, 1), "h": round(he, 1), "v": e, "w": bw})
+        sai.append({"x": round(x + 3, 1), "y": round(base - hs, 1), "h": round(hs, 1), "v": s, "w": bw})
+    rot = [r[3:].replace("-", "/") for r in rotulos]
+    return {
+        "w": LAR, "h": ALT, "m": M, "base": base,
+        "rotulos": rot, "entradas": ent, "saidas": sai, "max": round(max_v, 2),
+    }
+
+
+def grafico_donut(items):
+    """Prepara um gráfico de rosca (distribuição de despesas por categoria) em SVG."""
+    items = [i for i in items if i["s"] > 0]
+    total = sum(i["s"] for i in items)
+    if total <= 0:
+        return None
+    cores = ["#58a6ff", "#2fb344", "#ffb73e", "#ff6369", "#a371f7", "#39c5cf", "#8b949e"]
+    CX, CY, R, IR = 230, 140, 110, 62
+    segs = []
+    ang = 0.0
+    for idx, it in enumerate(items):
+        frac = round(it["s"] / total * 100, 2)
+        segs.append({
+            "cat": it["cat"], "s": it["s"], "frac": frac,
+            "color": cores[idx % len(cores)],
+            "dash": "%.2f %.2f" % (frac, 100 - frac),
+            "offset": "%.2f" % (-ang),
+        })
+        ang += frac
+    return {"segs": segs, "total": total, "cx": CX, "cy": CY, "r": R, "ir": IR, "sw": R - IR}
 
 
 OBJETIVOS_META = {
@@ -612,6 +692,12 @@ CATEGORIAS = [
     "Carboidratos", "Proteínas", "Laticínios", "Verduras e Legumes",
     "Frutas", "Gorduras", "Extras",
 ]
+
+STATUS_LEADS = ("novo", "em contato", "proposta", "convertido", "perdido")
+
+LEAD_ORIGENS = ["Instagram", "Indicação", "WhatsApp", "Google", "Rua/Redes", "Outro"]
+
+DESPESA_CATEGORIAS = ["Ferramentas", "Marketing", "Impostos", "Aluguel", "Suplementos", "Transporte", "Outros"]
 
 EQUIV_LABELS = {
     "amido": "Amidos (arroz, batata, mandioca...)",
@@ -1123,6 +1209,9 @@ def inject_helpers():
         GRUPOS_LIB=GRUPOS_LIB,
         EQUIV_LABELS=EQUIV_LABELS,
         CATEGORIAS=CATEGORIAS,
+        STATUS_LEADS=STATUS_LEADS,
+        LEAD_ORIGENS=LEAD_ORIGENS,
+        DESPESA_CATEGORIAS=DESPESA_CATEGORIAS,
         hoje=datetime.date.today().isoformat(),
     )
 
@@ -2000,6 +2089,183 @@ def financeiro():
         esperado=esperado, recebido=recebido,
         pendente=esperado - recebido, atrasados_n=atrasados_n,
     )
+
+
+@app.route("/relatorios")
+def relatorios():
+    con = get_db()
+    meses = ultimos_meses(6)
+    mes = mes_atual()
+    entradas_mes, saidas_mes = [], []
+    for m in meses:
+        entradas_mes.append(con.execute(
+            "SELECT COALESCE(SUM(valor), 0) AS s FROM pagamentos WHERE mes = ? AND status = 'pago'", (m,)
+        ).fetchone()["s"])
+        saidas_mes.append(con.execute(
+            "SELECT COALESCE(SUM(valor), 0) AS s FROM despesas WHERE substr(data, 1, 7) = ?", (m,)
+        ).fetchone()["s"])
+    grafico = grafico_barras_mes(meses, entradas_mes, saidas_mes)
+
+    entradas = sum(entradas_mes)
+    saidas = sum(saidas_mes)
+    entradas_mes_atual = entradas_mes[-1]
+    saidas_mes_atual = saidas_mes[-1]
+    saldo_mes = entradas_mes_atual - saidas_mes_atual
+    saldo_geral = entradas - saidas
+
+    categorias = con.execute(
+        """SELECT COALESCE(NULLIF(categoria, ''), 'Geral') AS cat, SUM(valor) AS s
+           FROM despesas WHERE substr(data, 1, 7) >= ? GROUP BY cat ORDER BY s DESC""",
+        (meses[0],),
+    ).fetchall()
+    donut = grafico_donut(categorias)
+
+    maiores_despesas = con.execute("SELECT * FROM despesas ORDER BY valor DESC LIMIT 5").fetchall()
+    despesas = con.execute("SELECT * FROM despesas ORDER BY data DESC, id DESC LIMIT 60").fetchall()
+
+    leads = con.execute("SELECT * FROM leads ORDER BY id DESC").fetchall()
+    total_leads = len(leads)
+    leads_mes = sum(1 for l in leads if (l["data"] or "")[:7] == mes)
+    convertidos = sum(1 for l in leads if l["status"] == "convertido")
+    em_contato = sum(1 for l in leads if l["status"] in ("em contato", "proposta"))
+    em_aberto = sum(1 for l in leads if l["status"] in ("novo", "em contato", "proposta"))
+    taxa_conversao = round(convertidos * 100 / total_leads, 1) if total_leads else 0
+
+    alunos_ativos = con.execute("SELECT COUNT(*) AS n FROM alunos WHERE ativo = 1").fetchone()["n"]
+    novos_mes = con.execute(
+        "SELECT COUNT(*) AS n FROM alunos WHERE substr(criado_em, 1, 7) = ?", (mes,)
+    ).fetchone()["n"]
+    recebido_geral = con.execute(
+        "SELECT COALESCE(SUM(valor), 0) AS s FROM pagamentos WHERE status = 'pago'"
+    ).fetchone()["s"]
+    ticket_medio = round(recebido_geral / alunos_ativos, 2) if alunos_ativos else 0
+    top_alunos = con.execute(
+        """SELECT a.nome, COALESCE(SUM(p.valor), 0) AS v
+           FROM pagamentos p JOIN alunos a ON a.id = p.aluno_id
+           WHERE p.status = 'pago' GROUP BY a.id ORDER BY v DESC LIMIT 5"""
+    ).fetchall()
+
+    return render_template(
+        "relatorios.html", active="relatorios",
+        mes=mes, mes_nome=mes_label(mes), meses=meses,
+        grafico=grafico, donut=donut,
+        entradas_mes=entradas_mes, saidas_mes=saidas_mes,
+        entradas=entradas, saidas=saidas, saldo_geral=saldo_geral,
+        entradas_mes_atual=entradas_mes_atual, saidas_mes_atual=saidas_mes_atual, saldo_mes=saldo_mes,
+        despesas=despesas, maiores_despesas=maiores_despesas,
+        leads=leads, total_leads=total_leads, leads_mes=leads_mes,
+        convertidos=convertidos, em_contato=em_contato, em_aberto=em_aberto, taxa_conversao=taxa_conversao,
+        alunos_ativos=alunos_ativos, novos_mes=novos_mes, ticket_medio=ticket_medio, top_alunos=top_alunos,
+        status_leads=STATUS_LEADS,
+    )
+
+
+@app.route("/financeiro/despesa/novo", methods=["POST"])
+def nova_despesa():
+    con = get_db()
+    descricao = request.form.get("descricao", "").strip()
+    if descricao:
+        con.execute(
+            "INSERT INTO despesas (descricao, categoria, valor, data) VALUES (?, ?, ?, ?)",
+            (descricao, request.form.get("categoria", "").strip(),
+             num(request.form.get("valor", ""), 0) or 0,
+             request.form.get("data", "").strip() or datetime.date.today().isoformat()),
+        )
+        con.commit()
+        flash("Despesa registrada.", "success")
+    return redirect(url_for("relatorios"))
+
+
+@app.route("/financeiro/despesa/<int:despesa_id>/editar", methods=["POST"])
+def editar_despesa(despesa_id):
+    con = get_db()
+    d = con.execute("SELECT * FROM despesas WHERE id = ?", (despesa_id,)).fetchone()
+    if d:
+        descricao = request.form.get("descricao", "").strip()
+        if descricao:
+            con.execute(
+                "UPDATE despesas SET descricao = ?, categoria = ?, valor = ?, data = ? WHERE id = ?",
+                (descricao, request.form.get("categoria", "").strip(),
+                 num(request.form.get("valor", ""), 0) or 0,
+                 request.form.get("data", "").strip() or d["data"], despesa_id),
+            )
+            con.commit()
+            flash("Despesa atualizada.", "success")
+    return redirect(url_for("relatorios"))
+
+
+@app.route("/financeiro/despesa/<int:despesa_id>/excluir", methods=["POST"])
+def excluir_despesa(despesa_id):
+    con = get_db()
+    con.execute("DELETE FROM despesas WHERE id = ?", (despesa_id,))
+    con.commit()
+    flash("Despesa excluída.", "info")
+    return redirect(url_for("relatorios"))
+
+
+@app.route("/financeiro/lead/novo", methods=["POST"])
+def novo_lead():
+    con = get_db()
+    nome = request.form.get("nome", "").strip()
+    if nome:
+        status = request.form.get("status", "").strip() or "novo"
+        if status not in STATUS_LEADS:
+            status = "novo"
+        con.execute(
+            "INSERT INTO leads (nome, telefone, origem, status, valor_servico, observacoes, data) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (nome, request.form.get("telefone", "").strip(),
+             request.form.get("origem", "").strip(), status,
+             num(request.form.get("valor_servico", ""), None),
+             request.form.get("observacoes", "").strip(),
+             request.form.get("data", "").strip() or datetime.date.today().isoformat()),
+        )
+        con.commit()
+        flash("Lead cadastrado.", "success")
+    return redirect(url_for("relatorios"))
+
+
+@app.route("/financeiro/lead/<int:lead_id>/editar", methods=["POST"])
+def editar_lead(lead_id):
+    con = get_db()
+    l = con.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
+    if l:
+        nome = request.form.get("nome", "").strip()
+        if nome:
+            status = request.form.get("status", "").strip()
+            if status not in STATUS_LEADS:
+                status = l["status"]
+            con.execute(
+                "UPDATE leads SET nome = ?, telefone = ?, origem = ?, status = ?, valor_servico = ?, observacoes = ?, data = ? WHERE id = ?",
+                (nome, request.form.get("telefone", "").strip(),
+                 request.form.get("origem", "").strip(), status,
+                 num(request.form.get("valor_servico", ""), None),
+                 request.form.get("observacoes", "").strip(),
+                 request.form.get("data", "").strip() or l["data"], lead_id),
+            )
+            con.commit()
+            flash("Lead atualizado.", "success")
+    return redirect(url_for("relatorios"))
+
+
+@app.route("/financeiro/lead/<int:lead_id>/excluir", methods=["POST"])
+def excluir_lead(lead_id):
+    con = get_db()
+    con.execute("DELETE FROM leads WHERE id = ?", (lead_id,))
+    con.commit()
+    flash("Lead excluído.", "info")
+    return redirect(url_for("relatorios"))
+
+
+@app.route("/financeiro/lead/<int:lead_id>/status", methods=["POST"])
+def lead_status(lead_id):
+    con = get_db()
+    status = request.form.get("status", "").strip()
+    if status in STATUS_LEADS:
+        con.execute("UPDATE leads SET status = ? WHERE id = ?", (status, lead_id))
+        con.commit()
+        flash("Status do lead atualizado.", "info")
+    return redirect(url_for("relatorios"))
 
 
 @app.route("/aluno/<int:aluno_id>/treino/imprimir")

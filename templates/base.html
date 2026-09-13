@@ -113,6 +113,9 @@
         <a href="{{ url_for('financeiro') }}" class="{{ 'active' if active == 'financeiro' }}">
           <svg class="icon"><use href="#i-dollar"/></svg><span>Financeiro</span>
         </a>
+        <a href="{{ url_for('relatorios') }}" class="{{ 'active' if active == 'relatorios' }}">
+          <svg class="icon"><use href="#i-activity"/></svg><span>Relatórios</span>
+        </a>
       </nav>
 
       <div class="side-foot">
@@ -151,6 +154,9 @@
       </a>
       <a href="{{ url_for('financeiro') }}" class="{{ 'active' if active == 'financeiro' }}">
         <svg class="icon"><use href="#i-dollar"/></svg><span>Financeiro</span>
+      </a>
+      <a href="{{ url_for('relatorios') }}" class="{{ 'active' if active == 'relatorios' }}">
+        <svg class="icon"><use href="#i-activity"/></svg><span>Relatórios</span>
       </a>
     </nav>
   </div>

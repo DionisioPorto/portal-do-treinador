@@ -1043,3 +1043,50 @@ input[type="file"] {
 .side-logout:hover { color: var(--red); background: var(--red-soft); }
 .side-logout .icon { width: 15px; height: 15px; color: var(--muted-2); }
 .side-logout:hover .icon { color: var(--red); }
+
+/* ---- Relatórios ---- */
+.inline { display: inline-flex; }
+.table-scroll { overflow-x: auto; }
+.select-sm {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+.badge-select {
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+.select-sm:focus { outline: none; }
+
+.badge.novo { background: var(--accent-soft); color: var(--accent); }
+.badge.em-contato { background: var(--amber-soft); color: var(--amber); }
+.badge.proposta { background: #e3c9ff; color: #5b2a8f; }
+.badge.convertido { background: var(--green-soft); color: var(--green); }
+.badge.perdido { background: var(--red-soft); color: var(--red); }
+.b-novo { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.b-em-contato { background: var(--amber-soft); color: var(--amber); border-color: transparent; }
+.b-proposta { background: #e3c9ff; color: #5b2a8f; border-color: transparent; }
+.b-convertido { background: var(--green-soft); color: var(--green); border-color: transparent; }
+.b-perdido { background: var(--red-soft); color: var(--red); border-color: transparent; }
+
+.chart-wrap { overflow-x: auto; }
+.chart-wrap svg { display: block; width: 100%; min-width: 560px; max-width: 720px; height: auto; }
+.chart-legend {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.donut-wrap { display: flex; justify-content: center; padding-top: 4px; }
+.donut-wrap svg { width: 100%; max-width: 320px; height: auto; }
+.donut-legend { margin-top: 14px; display: grid; gap: 8px; }
+.donut-legend .legend-item { justify-content: space-between; }
+.legend-name { color: var(--text); }
+.legend-value { color: var(--muted-2); font-size: 12.5px; }

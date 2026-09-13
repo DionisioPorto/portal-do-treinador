@@ -13,6 +13,9 @@
     <label for="mes-sel">Mês de referência</label>
     <input type="month" id="mes-sel" name="m" value="{{ mes }}" onchange="this.form.submit()">
   </form>
+  <a class="btn ghost" href="{{ url_for('relatorios') }}">
+    <svg class="icon"><use href="#i-activity"/></svg>Relatórios
+  </a>
 </div>
 
 <div class="cards-grid">

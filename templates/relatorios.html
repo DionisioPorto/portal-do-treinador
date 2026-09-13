@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% block title %}Relatórios · Portal do Treinador{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="head-title">
+    <span class="page-title-ico"><svg class="icon"><use href="#i-activity"/></svg></span>
+    <div>
+      <h1>Relatórios</h1>
+      <div class="sub">Entradas, despesas e vendas · {{ mes_nome }}</div>
+    </div>
+  </div>
+  <div class="head-actions">
+    <a class="btn ghost" href="{{ url_for('financeiro') }}">
+      <svg class="icon"><use href="#i-dollar"/></svg>Mensalidades
+    </a>
+    <button type="button" class="btn primary" onclick="abrirDespesa()">
+      <svg class="icon"><use href="#i-plus"/></svg>Nova despesa
+    </button>
+    <button type="button" class="btn ghost" onclick="abrirLead()">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo lead
+    </button>
+  </div>
+</div>
+
+<div class="cards-grid">
+  <div class="card stat">
+    <div class="stat-icon green"><svg class="icon"><use href="#i-check-circle"/></svg></div>
+    <div class="stat-label">Entradas no mês</div>
+    <div class="stat-value">{{ brl(entradas_mes_atual) }}</div>
+    <div class="stat-sub">mensalidades recebidas</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon red"><svg class="icon"><use href="#i-receipt"/></svg></div>
+    <div class="stat-label">Despesas no mês</div>
+    <div class="stat-value">{{ brl(saidas_mes_atual) }}</div>
+    <div class="stat-sub">
+      {% set pct_custo = (saidas_mes_atual / entradas_mes_atual * 100) if entradas_mes_atual else 0 %}
+      {{ pct_custo | round | int }}% das entradas
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon {{ 'green' if saldo_mes >= 0 else 'red' }}"><svg class="icon"><use href="#i-trending"/></svg></div>
+    <div class="stat-label">Saldo do mês</div>
+    <div class="stat-value {{ 'green' if saldo_mes >= 0 else 'danger-text' }}">{{ brl(saldo_mes) }}</div>
+    <div class="stat-sub">lucro líquido no mês</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon amber"><svg class="icon"><use href="#i-users"/></svg></div>
+    <div class="stat-label">Leads no mês</div>
+    <div class="stat-value">{{ leads_mes }}</div>
+    <div class="stat-sub">{{ convertidos }} convertidos · taxa {{ "%.1f"|format(taxa_conversao) }}%</div>
+  </div>
+</div>
+
+<div class="cards-grid">
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-users"/></svg></div>
+    <div class="stat-label">Alunos ativos</div>
+    <div class="stat-value">{{ alunos_ativos }}</div>
+    <div class="stat-sub">{{ novos_mes }} matriculado(s) neste mês</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-dollar"/></svg></div>
+    <div class="stat-label">Ticket médio</div>
+    <div class="stat-value">{{ brl(ticket_medio) }}</div>
+    <div class="stat-sub">receita total ÷ alunos ativos</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-check-circle"/></svg></div>
+    <div class="stat-label">Leads em aberto</div>
+    <div class="stat-value">{{ em_aberto }}</div>
+    <div class="stat-sub">{{ em_contato }} em contato/proposta</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon {{ 'green' if saldo_geral >= 0 else 'red' }}"><svg class="icon"><use href="#i-receipt"/></svg></div>
+    <div class="stat-label">Saldo (últimos 6 meses)</div>
+    <div class="stat-value {{ 'green' if saldo_geral >= 0 else 'danger-text' }}">{{ brl(saldo_geral) }}</div>
+    <div class="stat-sub">{{ brl(entradas) }} entradas − {{ brl(saidas) }} despesas</div>
+  </div>
+</div>
+
+<div class="cards-grid">
+  <section class="card">
+    <div class="card-head">
+      <h3><svg class="icon"><use href="#i-trending"/></svg>Entradas × Despesas · últimos 6 meses</h3>
+    </div>
+    <div class="chart-wrap">
+      <svg viewBox="0 0 {{ grafico['w'] }} {{ grafico['h'] }}" preserveAspectRatio="xMidYMid meet">
+        {% for i in range(6) %}
+        <text x="{{ grafico['m'] + i * ((grafico['w'] - 2 * grafico['m']) / 6) + ((grafico['w'] - 2 * grafico['m']) / 6) / 2 }}" y="{{ grafico['base'] + 24 }}" text-anchor="middle" class="g-label">{{ grafico['rotulos'][i] }}</text>
+        {% endfor %}
+        <line x1="{{ grafico['m'] }}" y1="{{ grafico['base'] }}" x2="{{ grafico['w'] - grafico['m'] }}" y2="{{ grafico['base'] }}" stroke="rgba(139,153,172,0.3)" stroke-width="1"/>
+        {% for b in grafico['entradas'] %}
+        <rect x="{{ b['x'] }}" y="{{ b['y'] }}" width="{{ b['w'] }}" height="{{ b['h'] }}" rx="3" fill="#32d583" opacity="0.85"/>
+        {% if b['v'] %}<text x="{{ b['x'] + b['w'] / 2 }}" y="{{ b['y'] - 6 }}" text-anchor="middle" class="g-label" font-weight="700">{{ brl(b['v']).replace('R$ ', '').replace(',', '.') }}</text>{% endif %}
+        {% endfor %}
+        {% for b in grafico['saidas'] %}
+        <rect x="{{ b['x'] }}" y="{{ b['y'] }}" width="{{ b['w'] }}" height="{{ b['h'] }}" rx="3" fill="#ff6369" opacity="0.85"/>
+        {% if b['v'] %}<text x="{{ b['x'] + b['w'] / 2 }}" y="{{ b['y'] - 6 }}" text-anchor="middle" class="g-label" font-weight="700">{{ brl(b['v']).replace('R$ ', '').replace(',', '.') }}</text>{% endif %}
+        {% endfor %}
+      </svg>
+    </div>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#32d583;"></span>Entradas</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#ff6369;"></span>Despesas</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3><svg class="icon"><use href="#i-receipt"/></svg>Despesas por categoria</h3>
+    </div>
+    {% if donut %}
+    <div class="donut-wrap">
+      <svg viewBox="0 0 {{ donut['cx'] * 2 }} {{ donut['cy'] * 2 }}" preserveAspectRatio="xMidYMid meet">
+        {% for s in donut['segs'] %}
+        <circle cx="{{ donut['cx'] }}" cy="{{ donut['cy'] }}" r="{{ donut['r'] }}" fill="none"
+                stroke="{{ s['color'] }}" stroke-width="{{ donut['sw'] }}"
+                pathLength="100" stroke-dasharray="{{ s['dash'] }}" stroke-dashoffset="{{ s['offset'] }}"
+                transform="rotate(-90 {{ donut['cx'] }} {{ donut['cy'] }})"/>
+        {% endfor %}
+        <text x="{{ donut['cx'] }}" y="{{ donut['cy'] - 4 }}" text-anchor="middle" class="g-label" font-size="16" font-weight="700">{{ brl(donut['total']) }}</text>
+        <text x="{{ donut['cx'] }}" y="{{ donut['cy'] + 16 }}" text-anchor="middle" class="muted" font-size="11">últimos 6 meses</text>
+      </svg>
+    </div>
+    <div class="donut-legend">
+      {% for s in donut['segs'] %}
+      <div class="legend-item">
+        <span class="legend-dot" style="background:{{ s['color'] }};"></span>
+        <span class="legend-name">{{ s['cat'] }}</span>
+        <span class="legend-value"><strong>{{ brl(s['s']) }}</strong> · {{ "%.1f"|format(s['frac']) }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:26px;">
+      <div class="empty-ico"><svg class="icon"><use href="#i-receipt"/></svg></div>
+      <h3>Nenhuma despesa ainda</h3>
+      <p>Registre despesas para ver a distribuição por categoria.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-receipt"/></svg>Despesas</h3>
+    <button type="button" class="btn small" onclick="abrirDespesa()">
+      <svg class="icon"><use href="#i-plus"/></svg>Nova despesa
+    </button>
+  </div>
+  {% if despesas %}
+  <div class="table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Categoria</th>
+          <th>Data</th>
+          <th class="num">Valor</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in despesas %}
+        <tr>
+          <td class="strong">{{ d['descricao'] }}</td>
+          <td><span class="badge">{{ d['categoria'] or 'Geral' }}</span></td>
+          <td class="muted">{{ formatar_data(d['data']) }}</td>
+          <td class="num strong">{{ brl(d['valor']) }}</td>
+          <td class="actions-cell">
+            <button type="button" class="btn ghost small" data-url="{{ url_for('editar_despesa', despesa_id=d['id']) }}"
+                    data-descricao="{{ d['descricao'] }}" data-categoria="{{ d['categoria'] or '' }}"
+                    data-valor="{{ d['valor'] }}" data-data="{{ d['data'] }}" onclick="abrirDespesa(this)">
+              <svg class="icon"><use href="#i-pencil"/></svg>Editar
+            </button>
+            <form method="post" action="{{ url_for('excluir_despesa', despesa_id=d['id']) }}" class="inline" data-confirm="Excluir esta despesa?">
+              <button type="submit" class="btn ghost danger small">
+                <svg class="icon"><use href="#i-trash"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-ico"><svg class="icon"><use href="#i-receipt"/></svg></div>
+    <h3>Nenhuma despesa registrada</h3>
+    <p>Cadastre gastos com ferramentas, marketing, impostos, etc.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-users"/></svg>Leads (vendas)</h3>
+    <button type="button" class="btn ghost small" onclick="abrirLead()">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo lead
+    </button>
+  </div>
+  <div class="muted small" style="margin:-6px 0 12px;">Acompanhe quem está prospectando e converta em aluno (clique no status para atualizar).</div>
+  {% if leads %}
+  <div class="table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Origem</th>
+          <th>Telefone</th>
+          <th>Status</th>
+          <th>Valor do serviço</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in leads %}
+        <tr>
+          <td>
+            <div style="display:flex; align-items:center; gap:11px;">
+              <span class="avatar" style="width:34px;height:34px;font-size:12px;border-radius:10px;">{{ iniciais(l['nome']) }}</span>
+              <div>
+                <div class="strong">{{ l['nome'] }}</div>
+                {% if l['observacoes'] %}<div class="muted" style="font-size:12px;">{{ l['observacoes'] }}</div>{% endif %}
+              </div>
+            </div>
+          </td>
+          <td><span class="badge">{{ l['origem'] or '—' }}</span></td>
+          <td class="muted">{{ l['telefone'] or '—' }}</td>
+          <td>
+            <form method="post" action="{{ url_for('lead_status', lead_id=l['id']) }}" class="inline">
+              <select name="status" class="select-sm badge-select {{ 'b-' + (l['status'] | replace(' ', '-')) }}" onchange="this.form.submit()">
+                {% for st in STATUS_LEADS %}
+                <option value="{{ st }}" {{ 'selected' if l['status'] == st }}>{{ st }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          </td>
+          <td class="num strong">{{ brl(l['valor_servico']) }}</td>
+          <td class="muted">{{ formatar_data(l['data']) }}</td>
+          <td class="actions-cell">
+            <button type="button" class="btn ghost small" data-url="{{ url_for('editar_lead', lead_id=l['id']) }}"
+                    data-nome="{{ l['nome'] }}" data-telefone="{{ l['telefone'] or '' }}" data-origem="{{ l['origem'] or '' }}"
+                    data-status="{{ l['status'] }}" data-valor="{{ l['valor_servico'] or '' }}"
+                    data-observacoes="{{ l['observacoes'] or '' }}" data-data="{{ l['data'] }}" onclick="abrirLead(this)">
+              <svg class="icon"><use href="#i-pencil"/></svg>
+            </button>
+            <form method="post" action="{{ url_for('excluir_lead', lead_id=l['id']) }}" class="inline" data-confirm="Excluir este lead?">
+              <button type="submit" class="btn ghost danger small">
+                <svg class="icon"><use href="#i-trash"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-ico"><svg class="icon"><use href="#i-users"/></svg></div>
+    <h3>Nenhum lead ainda</h3>
+    <p>Cadastre pessoas interessadas para acompanhar sua conversão em alunos.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-trending"/></svg>Destaques</h3>
+  </div>
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-head" style="padding:14px 18px 0;"><h4 style="font-size:14px;color:var(--muted);margin:0;">Top alunos por receita</h4></div>
+      <table class="table">
+        <tbody>
+          {% for t in top_alunos %}
+          <tr>
+            <td>{{ iniciais(t['nome']) }} {{ t['nome'] }}</td>
+            <td class="num strong">{{ brl(t['v']) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2"><div class="muted">Sem pagamentos confirmados ainda.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-head" style="padding:14px 18px 0;"><h4 style="font-size:14px;color:var(--muted);margin:0;">Maiores despesas</h4></div>
+      <table class="table">
+        <tbody>
+          {% for m in maiores_despesas %}
+          <tr>
+            <td>{{ m['descricao'] }} <div class="muted" style="font-size:12px;">{{ m['categoria'] or 'Geral' }} · {{ formatar_data(m['data']) }}</div></td>
+            <td class="num strong">{{ brl(m['valor']) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2"><div class="muted">Nenhuma despesa registrada.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<dialog id="form-despesa" class="modal">
+  <form method="post" action="{{ url_for('nova_despesa') }}" id="form-despesa-form">
+    <div class="modal-head">
+      <h2 id="form-despesa-titulo">Nova despesa</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-despesa').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label>Descrição *</label><input name="descricao" id="dp-descricao" required placeholder="Ex: Licença do aplicativo de treinos"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Categoria</label>
+        <input name="categoria" id="dp-categoria" list="dp-categorias" placeholder="Ferramentas">
+        <datalist id="dp-categorias">
+          {% for c in DESPESA_CATEGORIAS %}<option value="{{ c }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="field"><label>Valor (R$) *</label><input type="number" step="0.01" min="0" name="valor" id="dp-valor" required></div>
+      <div class="field"><label>Data</label><input type="date" name="data" id="dp-data"></div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-despesa').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar despesa
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="form-lead" class="modal">
+  <form method="post" action="{{ url_for('novo_lead') }}" id="form-lead-form">
+    <div class="modal-head">
+      <h2 id="form-lead-titulo">Novo lead</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-lead').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Nome *</label><input name="nome" id="ld-nome" required placeholder="Nome da pessoa"></div>
+      <div class="field"><label>Telefone</label><input name="telefone" id="ld-telefone" placeholder="(11) 99999-9999"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Origem</label>
+        <input name="origem" id="ld-origem" list="ld-origens" placeholder="Instagram">
+        <datalist id="ld-origens">
+          {% for o in LEAD_ORIGENS %}<option value="{{ o }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select name="status" id="ld-status">
+          {% for st in STATUS_LEADS %}<option value="{{ st }}">{{ st }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field"><label>Valor do serviço (R$)</label><input type="number" step="0.01" min="0" name="valor_servico" id="ld-valor"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Data</label><input type="date" name="data" id="ld-data"></div>
+      <div class="field"><label>Observações</label><input name="observacoes" id="ld-observacoes" placeholder="Anotações"></div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-lead').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar lead
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const dpForm = document.getElementById('form-despesa-form');
+  window.abrirDespesa = function (btn) {
+    const t = document.getElementById('form-despesa-titulo');
+    document.getElementById('dp-descricao').value = '';
+    document.getElementById('dp-categoria').value = '';
+    document.getElementById('dp-valor').value = '';
+    const dpData = document.getElementById('dp-data');
+    if (btn) {
+      dpForm.action = btn.dataset.url;
+      t.textContent = 'Editar despesa';
+      document.getElementById('dp-descricao').value = btn.dataset.descricao;
+      document.getElementById('dp-categoria').value = btn.dataset.categoria;
+      document.getElementById('dp-valor').value = btn.dataset.valor;
+      dpData.value = btn.dataset.data;
+    } else {
+      dpForm.action = "{{ url_for('nova_despesa') }}";
+      t.textContent = 'Nova despesa';
+      dpData.value = "{{ hoje }}";
+    }
+    document.getElementById('form-despesa').showModal();
+  };
+  const ldForm = document.getElementById('form-lead-form');
+  window.abrirLead = function (btn) {
+    const t = document.getElementById('form-lead-titulo');
+    document.getElementById('ld-nome').value = '';
+    document.getElementById('ld-telefone').value = '';
+    document.getElementById('ld-origem').value = '';
+    document.getElementById('ld-status').value = 'novo';
+    document.getElementById('ld-valor').value = '';
+    document.getElementById('ld-observacoes').value = '';
+    const ldData = document.getElementById('ld-data');
+    if (btn) {
+      ldForm.action = btn.dataset.url;
+      t.textContent = 'Editar lead';
+      document.getElementById('ld-nome').value = btn.dataset.nome;
+      document.getElementById('ld-telefone').value = btn.dataset.telefone;
+      document.getElementById('ld-origem').value = btn.dataset.origem;
+      document.getElementById('ld-status').value = btn.dataset.status;
+      document.getElementById('ld-valor').value = btn.dataset.valor;
+      document.getElementById('ld-observacoes').value = btn.dataset.observacoes;
+      ldData.value = btn.dataset.data;
+    } else {
+      ldForm.action = "{{ url_for('novo_lead') }}";
+      t.textContent = 'Novo lead';
+      ldData.value = "{{ hoje }}";
+    }
+    document.getElementById('form-lead').showModal();
+  };
+})();
+</script>
+{% endblock %}
