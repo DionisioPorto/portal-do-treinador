@@ -995,3 +995,51 @@ input[type="file"] {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* ---- Login ---- */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(1200px 500px at 50% -10%, rgba(47, 107, 255, 0.14), transparent 60%),
+    var(--bg);
+  padding: 24px;
+}
+.login-wrap { width: 100%; max-width: 400px; }
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.login-warn {
+  display: flex; gap: 10px;
+  align-items: flex-start;
+  background: rgba(255, 183, 62, 0.08);
+  border: 1px solid rgba(255, 183, 62, 0.4);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.login-warn .icon { width: 17px; height: 17px; color: #ffb73e; flex-shrink: 0; margin-top: 1px; }
+.login-foot { text-align: center; margin-top: 16px; }
+
+/* ---- Sair (sidebar) ---- */
+.side-logout {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%;
+  padding: 6px;
+  background: none; border: none;
+  color: var(--muted);
+  font-family: inherit; font-size: 12.5px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.side-logout:hover { color: var(--red); background: var(--red-soft); }
+.side-logout .icon { width: 15px; height: 15px; color: var(--muted-2); }
+.side-logout:hover .icon { color: var(--red); }

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · Portal do Treinador</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230d1119'/><path d='M14 24v16M50 24v16M8 30v4M56 30v4M18 32h28' stroke='%2358a6ff' stroke-width='5' stroke-linecap='round'/></svg>">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="brand-logo" style="width:46px;height:46px;border-radius:14px;">
+          <svg class="icon" style="width:22px;height:22px;"><use href="#i-dumbbell"/></svg>
+        </span>
+        <span class="brand-text" style="font-size:19px;">
+          Portal<small>do Treinador</small>
+        </span>
+      </div>
+
+      <div id="toasts" style="margin-bottom:14px;">
+        {% with msgs = get_flashed_messages(with_categories=true) %}
+          {% for cat, m in msgs %}
+          <div class="toast toast-{{ cat }}" style="width:100%;">{{ m }}</div>
+          {% endfor %}
+        {% endwith %}
+      </div>
+
+      {% if senha_padrao %}
+      <div class="login-warn">
+        <svg class="icon"><use href="#i-alert"/></svg>
+        <span style="font-size:12.5px;">Você está usando a senha padrão. Para trocar, defina as variáveis <b>LOGIN_USUARIO</b> e <b>LOGIN_SENHA</b> no Railway (ou na sua máquina).</span>
+      </div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('login') }}">
+        <div class="field">
+          <label for="login-usuario">Usuário</label>
+          <input type="text" id="login-usuario" name="usuario" required autocomplete="username" autofocus placeholder="Seu usuário">
+        </div>
+        <div class="field">
+          <label for="login-senha">Senha</label>
+          <input type="password" id="login-senha" name="senha" required autocomplete="current-password" placeholder="Sua senha">
+        </div>
+        <button type="submit" class="btn primary" style="width:100%;justify-content:center;padding:11px;">
+          <svg class="icon"><use href="#i-check"/></svg>Entrar
+        </button>
+      </form>
+    </div>
+    <div class="login-foot muted-2">Acesso restrito · somente para o treinador</div>
+  </div>
+
+  <svg class="sprite" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-dumbbell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </symbol>
+  </svg>
+</body>
+</html>

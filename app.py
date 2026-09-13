@@ -4,7 +4,7 @@ import datetime
 import re
 from pathlib import Path
 
-from flask import Flask, g, render_template, request, redirect, url_for, abort, flash, send_from_directory
+from flask import Flask, g, render_template, request, redirect, url_for, abort, flash, send_from_directory, session
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(
@@ -19,7 +19,10 @@ MAX_FOTO_BYTES = 6 * 1024 * 1024
 TIPOS_FOTO = {"jpg", "jpeg", "png", "webp", "gif"}
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "portal-treinador-local-2026"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "portal-treinador-local-2026")
+
+LOGIN_USUARIO = os.environ.get("LOGIN_USUARIO", "admin")
+LOGIN_SENHA = os.environ.get("LOGIN_SENHA", "portal123")
 
 MESES = [
     "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -1223,6 +1226,37 @@ with app.app_context():
     n_alunos = get_db().execute("SELECT COUNT(*) AS n FROM alunos").fetchone()["n"]
     print(f"[boot] DATA_DIR={DATA_DIR.resolve()} banco_ja_existia={db_antes} alunos={n_alunos}", flush=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@app.before_request
+def exigir_login():
+    if request.endpoint == "static" or request.endpoint in ("login", "logout"):
+        return
+    if not session.get("logado"):
+        return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        u = request.form.get("usuario", "").strip()
+        s = request.form.get("senha", "")
+        if u == LOGIN_USUARIO and s == LOGIN_SENHA:
+            session.clear()
+            session["logado"] = True
+            session["usuario"] = u
+            flash("Bem-vindo!", "success")
+            return redirect(url_for("dashboard"))
+        flash("Usuário ou senha inválidos.", "danger")
+        return redirect(url_for("login"))
+    senha_padrao = os.environ.get("LOGIN_SENHA") in (None, "")
+    return render_template("login.html", senha_padrao=senha_padrao)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 @app.route("/")

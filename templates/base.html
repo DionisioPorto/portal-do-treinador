@@ -121,6 +121,11 @@
           <span>{{ mes_label(mes_atual()) | capitalize }}</span>
         </div>
         <div class="side-foot-item muted-2">V1.0 · dados locais</div>
+        <form method="post" action="{{ url_for('logout') }}">
+          <button type="submit" class="side-logout">
+            <svg class="icon"><use href="#i-arLeft"/></svg><span>Sair</span>
+          </button>
+        </form>
       </div>
     </aside>
 
