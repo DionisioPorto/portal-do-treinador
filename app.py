@@ -305,6 +305,7 @@ def preparar_grafico_peso(serie):
         return {
             "pontos": [{"x": round(LAR / 2, 1), "y": round(ALT / 2, 1), "peso": pesos[0], "data": serie[0]["data"]}],
             "min": round(gmin, 1), "max": round(gmax, 1), "w": LAR, "h": ALT, "m": M, "n": 1,
+            "yb": ALT - M,
         }
     if gmax - gmin < 0.5:
         gmin, gmax = gmin - 1, gmax + 1
