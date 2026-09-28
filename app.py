@@ -997,6 +997,134 @@ ALIMENTOS_PADRAO = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Porções realistas por grupo e por alimento (g): (mínimo, ideal, máximo).
+# O assistente NUNCA passa desses limites: porção realista vence a matemática.
+# ---------------------------------------------------------------------------
+PORCOES_POR_GRUPO = {
+    "amido":         (60, 150, 250),
+    "pao":           (40, 80, 100),
+    "cereal":        (20, 40, 70),
+    "leguminosa":    (60, 100, 160),
+    "proteina":      (80, 150, 250),
+    "laticinio":     (50, 140, 300),
+    "fruta":         (80, 130, 220),
+    "gordura":       (5, 12, 25),
+    "doce":          (10, 20, 40),
+    "legume":        (60, 120, 160),
+    "verdura_folha": (20, 40, 80),
+}
+
+PORCOES_POR_NOME = {
+    "Iogurte natural":        (100, 170, 300),
+    "Iogurte grego":          (100, 170, 300),
+    "Leite desnatado":        (100, 200, 300),
+    "Arroz branco cozido":    (100, 180, 300),
+    "Arroz integral cozido":  (100, 180, 300),
+    "Batata-doce cozida":     (100, 200, 300),
+    "Batata inglesa cozida":  (80, 200, 300),
+    "Macarrão cozido":        (80, 180, 280),
+    "Mandioca cozida":        (80, 180, 280),
+    "Feijão preto":           (60, 100, 160),
+    "Feijão carioca":         (60, 100, 160),
+    "Lentilha":               (60, 100, 160),
+    "Grão-de-bico":           (60, 100, 160),
+    "Peito de frango grelhado": (100, 180, 250),
+    "Filé de tilápia":        (100, 180, 250),
+    "Filé de merluza":        (100, 180, 250),
+    "Peito de peru":          (80, 150, 200),
+    "Bife magro (alcatra)":   (100, 180, 250),
+    "Carne moída magra":      (80, 150, 220),
+    "Salmão grelhado":        (100, 160, 220),
+    "Atum em água":           (80, 150, 200),
+    "Ovo cozido":             (50, 100, 200),
+    "Tofu":                   (80, 150, 250),
+    "Pão integral":           (40, 60, 100),
+    "Pão francês":            (40, 80, 100),
+    "Torrada integral":       (30, 40, 60),
+    "Tapioca":                (60, 80, 120),
+    "Aveia em flocos":        (20, 40, 70),
+    "Granola":                (20, 40, 60),
+    "Cereal integral":        (30, 50, 70),
+    "Castanha-do-pará":       (10, 20, 30),
+    "Amêndoas":               (10, 20, 30),
+    "Nozes":                  (10, 20, 30),
+    "Pasta de amendoim":      (10, 20, 30),
+    "Azeite de oliva":        (5, 10, 15),
+    "Banana":                 (70, 110, 150),
+    "Maçã":                   (80, 130, 170),
+    "Pera":                   (80, 130, 170),
+    "Laranja":                (100, 160, 240),
+    "Mamão papaia":           (100, 200, 300),
+    "Morango":                (80, 150, 250),
+    "Uva":                    (80, 120, 150),
+    "Abacaxi":                (100, 150, 240),
+    "Queijo cottage":         (50, 120, 200),
+    "Ricota":                 (50, 80, 120),
+    "Queijo minas frescal":   (40, 60, 90),
+    "Alface":                 (20, 40, 80),
+    "Rúcula":                 (20, 40, 80),
+    "Espinafre":              (20, 40, 80),
+    "Couve":                  (20, 40, 80),
+    "Tomate":                 (60, 100, 160),
+    "Brócolis":               (60, 120, 160),
+    "Couve-flor":             (60, 120, 160),
+    "Cenoura":                (50, 80, 120),
+    "Abobrinha":              (60, 120, 160),
+    "Chuchu":                 (60, 100, 150),
+    "Vagem":                  (60, 100, 150),
+    "Pepino":                 (50, 80, 130),
+    "Beterraba":              (50, 80, 120),
+}
+
+# Tolerâncias aceitáveis: a dieta é considera pronta dentro desses desvios.
+TOLERANCIAS_DIETA = {"kcal_pct": 1.5, "proteina": 5.0, "carbo": 10.0, "gordura": 5.0}
+
+# Distribuição diária por refeição: (kcal, proteína, carbo, gordura) - somam 1.0.
+DISTRIBUICAO_REFEICOES = {
+    "Café da manhã":   (0.20, 0.18, 0.22, 0.18),
+    "Lanche da manhã": (0.10, 0.10, 0.08, 0.12),
+    "Almoço":          (0.30, 0.32, 0.30, 0.30),
+    "Lanche da tarde": (0.15, 0.14, 0.13, 0.16),
+    "Jantar":          (0.25, 0.26, 0.27, 0.24),
+}
+
+# Estrutura da montagem automática por refeição: cada item é uma "função" da refeição
+# com uma lista de alimentos candidatos. Escolhemos 1 de cada (rotação por aluno).
+MONTAGEM_REFEICOES = {
+    "Café da manhã": [
+        ("proteína", ["Iogurte natural", "Iogurte grego", "Queijo cottage", "Ovo cozido"]),
+        ("carboidrato", ["Aveia em flocos", "Granola", "Pão integral", "Tapioca"]),
+        ("fruta", ["Banana", "Maçã", "Pera", "Mamão papaia", "Morango"]),
+    ],
+    "Lanche da manhã": [
+        ("proteína", ["Queijo cottage", "Iogurte natural", "Ovo cozido", "Ricota"]),
+        ("fruta", ["Maçã", "Banana", "Laranja", "Pera", "Morango"]),
+        ("gordura", ["Castanha-do-pará", "Amêndoas", "Nozes", "Pasta de amendoim"]),
+    ],
+    "Almoço": [
+        ("amido", ["Arroz branco cozido", "Arroz integral cozido", "Macarrão cozido", "Batata inglesa cozida"]),
+        ("leguminosa", ["Feijão preto", "Feijão carioca", "Lentilha", "Grão-de-bico"]),
+        ("proteína", ["Peito de frango grelhado", "Filé de tilápia", "Bife magro (alcatra)", "Carne moída magra", "Filé mignon", "Lagarto cozido"]),
+        ("folha", ["Alface", "Rúcula", "Espinafre"]),
+        ("legume", ["Tomate", "Cenoura", "Brócolis", "Abobrinha"]),
+    ],
+    "Lanche da tarde": [
+        ("carboidrato", ["Pão integral", "Pão francês", "Tapioca", "Torrada integral"]),
+        ("proteína", ["Queijo cottage", "Iogurte grego", "Ricota", "Peito de peru"]),
+        ("fruta", ["Banana", "Maçã", "Pera", "Uva"]),
+        ("gordura", ["Amêndoas", "Castanha-do-pará", "Pasta de amendoim"]),
+    ],
+    "Jantar": [
+        ("amido", ["Batata-doce cozida", "Arroz branco cozido", "Batata inglesa cozida", "Mandioca cozida"]),
+        ("proteína", ["Filé de tilápia", "Peito de frango grelhado", "Filé de merluza", "Salmão grelhado", "Ovo cozido"]),
+        ("folha", ["Brócolis", "Espinafre", "Couve"]),
+        ("legume", ["Cenoura", "Abobrinha", "Chuchu", "Vagem"]),
+        ("gordura", ["Azeite de oliva"]),
+    ],
+}
+
+
 def seed_alimentos():
     con = get_db()
     if con.execute("SELECT COUNT(*) AS n FROM alimentos").fetchone()["n"] > 0:
@@ -1066,76 +1194,152 @@ _CARB_GRUPOS = ("amido", "pao", "cereal", "fruta", "doce", "leguminosa")
 _FAT_GRUPOS = ("gordura",)
 
 
+def _faixa_porcao(x):
+    """Faixa (mínimo, ideal, máximo) de um alimento: nome sobrescreve o grupo."""
+    nome = (x.get("nome") or "").strip()
+    if nome in PORCOES_POR_NOME:
+        return PORCOES_POR_NOME[nome]
+    grup = x.get("grupo") or ""
+    if grup in PORCOES_POR_GRUPO:
+        return PORCOES_POR_GRUPO[grup]
+    base = float(x.get("porcao") or 100)
+    return (base * 0.5, float(base), base * 1.6)
+
+
+def _totais_item(it):
+    k = p = c = g = 0.0
+    for x in it:
+        w = float(x["qtd"]) / 100.0
+        k += (x["k"] or 0) * w
+        p += (x["p"] or 0) * w
+        c += (x["c"] or 0) * w
+        g += (x["g"] or 0) * w
+    return k, p, c, g
+
+
 def calcular_gramas(itens, kcal_t=0, p_t=0, c_t=0, g_t=0):
-    """Calcula as gramas de cada alimento para chegar perto das metas da refeição.
+    """Calcula as gramas respeitando faixas realistas de porção.
 
     itens: lista de dicts com k, p, c, g (por 100 g), porcao, grupo e nome.
-    Devolve a mesma lista com 'qtd' ajustado (g). Método determinístico:
-    proteínas resolvem primeiro (alimentos de proteína), depois carboidratos,
-    e a gordura da dieta absorve o resto para fechar as kcal.
+    Hierarquia: porções sempre dentro de [mínimo, máximo] > estrutura da
+    refeição > kcal > proteína > carboidratos/gorduras. As metas são
+    aproximadas dentro das tolerâncias configuradas — nunca se infla a
+    quantidade de um alimento além do máximo para "bater" o número.
+    Determinístico (mesma entrada gera sempre a mesma saída).
     """
+    PROTEICOS = ("proteina", "laticinio")
+    CARBUOS = ("amido", "pao", "cereal", "fruta", "doce", "leguminosa")
+
     it = [dict(x) for x in itens]
     for x in it:
         x["qtd"] = float(x.get("porcao") or 100)
 
-    def subnutri(lista):
-        k = p = c = g = 0.0
+    def nutri(lista):
+        return _totais_item(lista)
+
+    def fixar(livres):
+        for x in livres:
+            x["qtd"] = x["_ideal"]
+
+    for x in it:
+        mn, ide, mx = _faixa_porcao(x)
+        x["_min"], x["_ideal"], x["_max"] = mn, ide, mx
+
+    # Fase A - base: folhas/legumes na porção ideal; proteína/carboidrato no mínimo
+    for x in it:
+        if x["grupo"] in ("legume", "verdura_folha"):
+            x["qtd"] = x["_ideal"]
+        elif x["grupo"] in ("gordura", "doce"):
+            x["qtd"] = x["_ideal"]
+        else:
+            x["qtd"] = x["_min"]
+
+    def escalar(lista, attr, alvo, fixos):
+        """Distribui alvo entre os alimentos de 'lista' dentro de [min, max]."""
+        base = sum(((x[attr] or 0) / 100.0) * x["_min"] for x in lista)
+        topo = sum(((x[attr] or 0) / 100.0) * x["_max"] for x in lista)
+        ja = sum(((x[attr] or 0) / 100.0) * x["qtd"] for x in fixos)
+        if topo <= base + 1e-9:
+            return
+        t = (max(float(alvo or 0) - ja - base, 0.0)) / max(topo - base, 1e-9)
+        t = max(0.0, min(1.0, t))
         for x in lista:
-            w = x["qtd"] / 100.0
-            k += x["k"] * w
-            p += x["p"] * w
-            c += x["c"] * w
-            g += x["g"] * w
+            x["qtd"] = x["_min"] + (x["_max"] - x["_min"]) * t
+
+    prot = [x for x in it if x["grupo"] in PROTEICOS]
+    carb = [x for x in it if x["grupo"] in CARBUOS]
+    if prot:
+        fixos_p = [x for x in it if x not in prot]
+        escalar(prot, "p", p_t, fixos_p)
+    if carb:
+        fixos_c = [x for x in it if x not in carb]
+        escalar(carb, "c", c_t, fixos_c)
+
+    # Fase A.2 - reequilíbrio: aproxima P e C das metas (dentro da tolerância),
+    # corrigindo o acúmulo de macro vindo de feijão/oleaginosas/legumes.
+    def reequilibrar(lista, attr, alvo, tol, fixos):
+        for _ in range(4):
+            atual = sum(((x[attr] or 0) / 100.0) * x["qtd"] for x in lista)
+            fixo = sum(((x[attr] or 0) / 100.0) * x["qtd"] for x in fixos)
+            err = float(alvo or 0) - (atual + fixo)
+            if abs(err) <= tol:
+                return
+            alvo_lista = max(float(alvo or 0) - fixo, 0.0)
+            if atual <= 1e-9:
+                return
+            mult = alvo_lista / atual
+            novo_topo = sum(((x[attr] or 0) / 100.0) * x["_max"] for x in lista)
+            mult = min(mult, novo_topo / max(atual, 1e-9))
+            for x in lista:
+                x["qtd"] = max(float(x["_min"]), min(float(x["_max"]),
+                                                     float(x["qtd"]) * mult))
+
+    reequilibrar(prot, "p", p_t, TOLERANCIAS_DIETA["proteina"], fixos_p)
+    reequilibrar(carb, "c", c_t, TOLERANCIAS_DIETA["carbo"], fixos_c)
+
+    # Fase B - fecha as kcal ajustando dentro dos limites, sem nunca sair das faixas
+    def ajustar_kcal():
+        k, p, c, g = nutri(it)
+        tol = max(TOLERANCIAS_DIETA["kcal_pct"] * (kcal_t or 0) / 100.0, 25.0)
+        diff = float(kcal_t or 0) - k
+        for _ in range(10):
+            if abs(diff) <= tol or not it:
+                break
+            # sabores de redução (quem sai antes quando sobrou kcal)
+            reduzir_ordem = ("doce", "fruta", "gordura", "cereal", "pao",
+                             "leguminosa", "amido", "laticinio", "proteina")
+            if diff > 0:
+                mex = [x for x in it if (x["k"] or 0) > 0 and x["qtd"] < x["_max"] - 0.5]
+                if not mex:
+                    break
+                mex.sort(key=lambda x: (x["qtd"] - x["_min"]) /
+                         (x["_max"] - x["_min"]), reverse=True)
+            else:
+                mex = [x for x in it if (x["k"] or 0) > 0 and x["qtd"] > x["_min"] + 0.5]
+                if not mex:
+                    break
+                mex.sort(key=lambda x: (reduzir_ordem.index(x["grupo"])
+                                        if x["grupo"] in reduzir_ordem else 99,
+                                        x["qtd"]))
+            x = mex[0]
+            kp = max((x["k"] or 0) / 100.0, 1e-9)
+            delta = diff / kp
+            mx = x["_max"] - x["qtd"] if diff > 0 else x["qtd"] - x["_min"]
+            delta = max(-mx, min(mx, delta))
+            if abs(delta) < 1.0:
+                break
+            x["qtd"] += delta
+            k, p, c, g = nutri(it)
+            diff = float(kcal_t or 0) - k
         return k, p, c, g
 
-    def totalnutri():
-        return subnutri(it)
+    k, p, c, g = ajustar_kcal()
 
-    def distribuir(lista, attr, need, piso=0.4):
-        dens = [(x[attr] / 100.0) * (x["porcao"] or 100) for x in lista]
-        td = sum(dens)
-        if td <= 0:
-            return
-        for x, d in zip(lista, dens):
-            share = need * d / td
-            gramas = (share / (x[attr] / 100.0)) if x[attr] > 0 else (x["porcao"] or 100)
-            x["qtd"] = max(gramas, (x["porcao"] or 100) * piso)
-
-    prot_foods = [x for x in it if x["grupo"] in _PROT_GRUPOS]
-    carb_foods = [x for x in it if x["grupo"] in _CARB_GRUPOS]
-    fat_foods = [x for x in it if x["grupo"] in _FAT_GRUPOS]
-    outros = [x for x in it if x not in prot_foods]
-
-    _, op, oc, og = subnutri(outros)
-    need_p = max(float(p_t or 0) - op, 0.0)
-    if prot_foods and need_p > 0:
-        distribuir(prot_foods, "p", need_p)
-
-    nao_carb = [x for x in it if x not in carb_foods]
-    _, _, nc, _ = subnutri(nao_carb)
-    need_c = max(float(c_t or 0) - nc, 0.0)
-    if carb_foods and need_c > 0:
-        distribuir(carb_foods, "c", need_c)
-
-    k, p, c, g = totalnutri()
-    diff = float(kcal_t or 0) - k
-    if fat_foods and abs(diff) > 2:
-        chef = max(fat_foods, key=lambda x: x["k"])
-        ck = chef["k"] / 100.0
-        if ck > 0:
-            ng = chef["qtd"] + diff / ck
-            if ng >= 0:
-                chef["qtd"] = ng
-            else:
-                chef["qtd"] = 0
-        k, p, c, g = totalnutri()
-        diff = float(kcal_t or 0) - k
-    if abs(diff) > 2:
-        cb = sum((x["k"] / 100.0) * x["qtd"] for x in carb_foods)
-        if cb > 0:
-            fct = ((float(kcal_t or 0) - (k - cb)) / cb) if cb else 1.0
-            for x in carb_foods:
-                x["qtd"] = max(0.0, x["qtd"] * fct)
+    for x in it:
+        x["qtd"] = max(float(x["_min"]), min(float(x["_max"]), float(x["qtd"])))
+        x.pop("_min", None)
+        x.pop("_ideal", None)
+        x.pop("_max", None)
     return it
 
 
@@ -1889,6 +2093,93 @@ def gravar_alimentos(con, refeicao_id, pares):
             )
 
 
+def _selecionar_alimentos(con, nome_refeicao, aluno_id):
+    """Escolhe 1 alimento de cada papel estrutural da refeição (variedade por aluno).
+
+    A seleção acontece ANTES de ajustar quantidades: primeiro montamos um almoço
+    com proteína + carbo + verdura, depois o solver só dimensiona dentro da faixa.
+    """
+    out = []
+    for _, candidatos in MONTAGEM_REFEICOES.get(nome_refeicao, []):
+        if not candidatos:
+            continue
+        nome = candidatos[aluno_id % len(candidatos)]
+        if con.execute("SELECT 1 FROM alimentos WHERE nome = ?", (nome,)).fetchone():
+            out.append(nome)
+    return out
+
+
+def _avaliar_porcoes(itens, macros, dia=False):
+    """Gera avisos quando as porções/desvios saem das tolerâncias configuradas.
+
+    itens: lista com qtd, _min/_max já resolvidos (ou 'k/p/c/g/qtd')."""
+    avisos = []
+    for x in itens:
+        mn, mx = x.get("_min"), x.get("_max")
+        if mn is None:
+            mn, ide, mx = _faixa_porcao({"nome": x.get("nome"), "grupo": x.get("grupo"),
+                                         "porcao": x.get("porcao")})
+        q = float(x.get("qtd") or 0)
+        if q > mx + 0.5:
+            avisos.append(f"{x.get('nome')}: {round(q)} g acima do máximo ({round(mx)} g).")
+        elif q < mn - 0.5:
+            avisos.append(f"{x.get('nome')}: {round(q)} g abaixo do mínimo ({round(mn)} g).")
+    if not macros:
+        return avisos
+    kcal_t, p_t, c_t, g_t = macros
+    if not any(macros):
+        return avisos
+    k, p, c, g = _totais_item(itens)
+    tol_k = max(TOLERANCIAS_DIETA["kcal_pct"] * (kcal_t or 0) / 100.0, 25.0)
+    if kcal_t and abs(k - kcal_t) > tol_k:
+        avisos.append(f"kcal: {round(k)} vs meta {round(kcal_t)} (dif. {round(k - kcal_t):+d}).")
+    if p_t and abs(p - p_t) > TOLERANCIAS_DIETA["proteina"]:
+        avisos.append(f"proteína: {round(p)} g vs meta {round(p_t)} g.")
+    if c_t and abs(c - c_t) > TOLERANCIAS_DIETA["carbo"]:
+        avisos.append(f"carboidratos: {round(c)} g vs meta {round(c_t)} g.")
+    if g_t and abs(g - g_t) > TOLERANCIAS_DIETA["gordura"]:
+        avisos.append(f"gordura: {round(g)} g vs meta {round(g_t)} g.")
+    return avisos
+
+
+@app.route("/refeicao/calcular", methods=["POST"])
+def calcular_refeicao():
+    """Fonte única do preview: o cliente envia ids + metas e recebe as gramas
+    calculadas pelo mesmo solver usado ao salvar. Evita duplicar a lógica em JS."""
+    dados = request.get_json(silent=True) or {}
+    itens = []
+    for i in dados.get("itens", []):
+        aid = intnum(i.get("aid"))
+        if aid:
+            itens.append((aid, num(i.get("qtd"), 0) or 0))
+    m = [num(x, 0) or 0 for x in (dados.get("macros") or [])]
+    m = (list(m) + [0, 0, 0, 0])[:4]
+    con = get_db()
+    pares = _pares_automaticos(con, itens, tuple(m))
+    rows = {int(r["id"]): r for r in _alimentos_info(con, [a for a, _ in pares])}
+    qmap = dict(pares)
+    resultado = []
+    for aid, qtd in pares:
+        r = rows.get(int(aid))
+        if not r:
+            continue
+        mn, ide, mx = _faixa_porcao(dict(r))
+        resultado.append({
+            "aid": int(aid), "nome": r["nome"], "grupo": r["grupo_equiv"],
+            "k": r["kcal"] or 0, "p": r["proteinas"] or 0,
+            "c": r["carbs"] or 0, "g": r["gorduras"] or 0,
+            "porcao": r["porcao"] or 100,
+            "qtd": qtd, "min": round(mn), "ideal": round(ide), "max": round(mx),
+        })
+    avisos = _avaliar_porcoes(
+        [{"nome": r["nome"], "grupo": r["grupo_equiv"], "porcao": r["porcao"] or 100,
+          "k": r["kcal"] or 0, "p": r["proteinas"] or 0,
+          "c": r["carbs"] or 0, "g": r["gorduras"] or 0,
+          "qtd": qmap[int(r["id"])]} for r in rows.values()], tuple(m)
+    )
+    return {"itens": resultado, "avisos": avisos}
+
+
 @app.route("/refeicao/<int:refeicao_id>/editar", methods=["POST"])
 def editar_refeicao(refeicao_id):
     con = get_db()
@@ -2456,6 +2747,50 @@ def imprimir_treino(aluno_id):
 
 
 @app.route("/aluno/<int:aluno_id>/dieta/imprimir")
+def validar_dieta(aluno_id):
+    """Valida a dieta salva antes do PDF: porções dentro das faixas e totais
+    reais próximos das metas diárias. Devolve (avisos, reais, metas)."""
+    con = get_db()
+    metas = con.execute("SELECT * FROM metas_dieta WHERE aluno_id = ?", (aluno_id,)).fetchone()
+    refeicoes = con.execute(
+        "SELECT * FROM refeicoes WHERE aluno_id = ? ORDER BY ordem, id", (aluno_id,)
+    ).fetchall()
+    alim = montar_alimentos(con, refeicoes)
+    avisos = []
+    k = p = c = g = 0.0
+    for rid, itens in alim.items():
+        for x in itens:
+            k += (x["kcal"] or 0) * (x["qtd"] or 0) / 100.0
+            p += (x["proteinas"] or 0) * (x["qtd"] or 0) / 100.0
+            c += (x["carbs"] or 0) * (x["qtd"] or 0) / 100.0
+            g += (x["gorduras"] or 0) * (x["qtd"] or 0) / 100.0
+            mn, ide, mx = _faixa_porcao(x)
+            q = float(x["qtd"] or 0)
+            if q > mx + 0.5:
+                avisos.append(f"{x['nome']}: {round(q)} g ultrapassa o máximo ({round(mx)} g).")
+            elif 0 < q < mn - 0.5:
+                avisos.append(f"{x['nome']}: {round(q)} g abaixo do mínimo ({round(mn)} g).")
+    reais = {"calorias": k, "proteinas": p, "carbs": c, "gorduras": g}
+    alvo = {
+        "calorias": (metas["kcal_diaria"] or 0) if metas else 0,
+        "proteinas": (metas["proteinas"] or 0) if metas else 0,
+        "carbs": (metas["carbs"] or 0) if metas else 0,
+        "gorduras": (metas["gorduras"] or 0) if metas else 0,
+    }
+    if metas and alvo["calorias"]:
+        tol_k = max(TOLERANCIAS_DIETA["kcal_pct"] * alvo["calorias"] / 100.0, 35.0)
+        if abs(k - alvo["calorias"]) > tol_k:
+            avisos.append(f"kcal totais: {round(k)} vs meta {round(alvo['calorias'])}.")
+        if abs(p - alvo["proteinas"]) > TOLERANCIAS_DIETA["proteina"]:
+            avisos.append(f"proteína total: {round(p)} g vs meta {round(alvo['proteinas'])} g.")
+        if abs(c - alvo["carbs"]) > TOLERANCIAS_DIETA["carbo"]:
+            avisos.append(f"carboidratos totais: {round(c)} g vs meta {round(alvo['carbs'])} g.")
+        if abs(g - alvo["gorduras"]) > TOLERANCIAS_DIETA["gordura"]:
+            avisos.append(f"gordura total: {round(g)} g vs meta {round(alvo['gorduras'])} g.")
+    return avisos, reais, alvo
+
+
+@app.route("/aluno/<int:aluno_id>/imprimir-dieta")
 def imprimir_dieta(aluno_id):
     a = get_aluno_or_404(aluno_id)
     con = get_db()
@@ -2470,8 +2805,14 @@ def imprimir_dieta(aluno_id):
         "gorduras": con.execute("SELECT COALESCE(SUM(gorduras), 0) AS s FROM refeicoes WHERE aluno_id = ?", (aluno_id,)).fetchone()["s"],
     }
     alim = montar_alimentos(con, refeicoes)
+    avisos, reais, alvo = validar_dieta(aluno_id)
+    if avisos:
+        flash("Dieta com ajustes sugeridos antes da impressão:", "warn")
+        for av in avisos:
+            flash(av, "warn")
     return render_template(
-        "imprimir_dieta.html", aluno=a, metas=metas, refeicoes=refeicoes, totais=totais, alim=alim
+        "imprimir_dieta.html", aluno=a, metas=metas, refeicoes=refeicoes,
+        totais=totais, alim=alim, avisos=avisos, reais=reais, alvo=alvo,
     )
 
 
@@ -2581,28 +2922,29 @@ def aplicar_dieta(aluno_id):
     for nome, hora, frac in REFEICOES_MODELO:
         horarios[nome] = rot["horarios"].get(nome, hora) if rot else hora
     for i, (nome, hora, frac) in enumerate(REFEICOES_MODELO, start=1):
+        kF, pF, cF, gF = DISTRIBUICAO_REFEICOES.get(nome, (frac, frac, frac, frac))
         cur = con.execute(
             """INSERT INTO refeicoes
                (aluno_id, nome, horario, calorias, proteinas, carbs, gorduras, descricao, ordem)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 aluno_id, nome, horarios[nome],
-                round(c["meta_kcal"] * frac),
-                round(c["proteina"] * frac),
-                round(c["carbo"] * frac),
-                round(c["gordura"] * frac),
+                round(c["meta_kcal"] * kF),
+                round(c["proteina"] * pF),
+                round(c["carbo"] * cF),
+                round(c["gordura"] * gF),
                 "", i,
             ),
         )
     con.commit()
-    # vincula os alimentos padrão às refeições geradas, com gramas calculadas
+    # monta cada refeição com seleção estruturada (variedade por aluno), gramas calculadas
     refs = con.execute(
         "SELECT * FROM refeicoes WHERE aluno_id = ? ORDER BY ordem, id", (aluno_id,)
     ).fetchall()
     for r in refs:
-        padroes = ALIMENTOS_PADRAO.get(r["nome"], [])
+        nomes = _selecionar_alimentos(con, r["nome"], aluno_id)
         ids = []
-        for pn in padroes:
+        for pn in nomes:
             row = con.execute(
                 "SELECT id FROM alimentos WHERE nome = ? ORDER BY id LIMIT 1", (pn,)
             ).fetchone()

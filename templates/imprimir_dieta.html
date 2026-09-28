@@ -34,6 +34,22 @@
       </div>
     </div>
 
+    {% if avisos %}
+    <div class="print-block no-print" style="border:1px solid rgba(242,184,68,.5);background:var(--amber-soft);padding:12px 16px;border-radius:12px;">
+      <h2 style="color:var(--amber);margin:0 0 6px;">Ajustes sugeridos antes de imprimir</h2>
+      <ul style="margin:0;padding-left:18px;font-size:13px;">
+        {% for av in avisos %}<li>{{ av }}</li>{% endfor %}
+      </ul>
+      <div class="muted small" style="margin-top:6px;">
+        {% if reais %}Reais no cardápio: {{ reais['calorias'] | round(0) }} kcal ·
+        {{ reais['proteinas'] | round(0) }} g prot ·
+        {{ reais['carbs'] | round(0) }} g carb ·
+        {{ reais['gorduras'] | round(0) }} g gord.
+        {% if alvo and alvo['calorias'] %} · Meta: {{ alvo['calorias'] | round(0) }} kcal.{% endif %}{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     {% if metas %}
     <section class="print-block">
       <h2>Metas diárias</h2>

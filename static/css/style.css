@@ -444,6 +444,7 @@ a.strong { font-weight: 600; }
 .treino-lib-name { font-weight: 700; font-size: 14px; }
 
 /* ---- Alimentos e substituições ---- */
+.rf-aviso { color: var(--amber); font-size: 12px; font-weight: 600; display: block; }
 .food-list { display: grid; gap: 7px; }
 .food-item { display: flex; flex-direction: column; gap: 3px; }
 .food-chip {
@@ -815,6 +816,8 @@ a.strong { font-weight: 600; }
 }
 .toast-success::before { background: var(--green); }
 .toast-info::before { background: var(--accent); }
+.toast-warn::before { background: var(--amber); }
+.toast-error::before { background: var(--red); }
 .toast-leave { opacity: 0; transform: translateY(-8px); transition: all 0.3s ease; }
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-10px); }

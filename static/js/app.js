@@ -160,67 +160,33 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    window.calcularGramasJS = function (itens, kcalT, pT, cT, gT) {
+    window.calcularGramasJS = async function (itens, kcalT, pT, cT, gT) {
       kcalT = parseFloat(kcalT) || 0;
       pT = parseFloat(pT) || 0;
       cT = parseFloat(cT) || 0;
       gT = parseFloat(gT) || 0;
-      var it = itens.map(function (x) { return Object.assign({}, x); });
-      it.forEach(function (x) { x.qtd = parseFloat(x.porcao) || 100; });
-      function subnutri(lista) {
-        var k = 0, p = 0, c = 0, g = 0;
-        lista.forEach(function (x) {
-          var w = x.qtd / 100;
-          k += x.k * w; p += x.p * w; c += x.c * w; g += x.g * w;
+      try {
+        var resp = await fetch("/refeicao/calcular", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itens: itens.map(function (x) { return { aid: x.aid, qtd: 0 }; }),
+            macros: [kcalT, pT, cT, gT]
+          })
         });
-        return [k, p, c, g];
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        var dados = await resp.json();
+        var lista = (dados && dados.itens) || [];
+        window.__rf_avisos = (dados && dados.avisos) || [];
+        lista.forEach(function (x) { x.qtd = Number(x.qtd) || 0; });
+        return lista;
+      } catch (e) {
+        window.__rf_avisos = ["Não foi possível recalcular no servidor; usando porções padrão."];
+        return itens.map(function (x) { return Object.assign({}, x, { qtd: x.porcao }); });
       }
-      function isProt(x) { return x.grupo === "proteina" || x.grupo === "laticinio"; }
-      function isCarb(x) {
-        return ["amido", "pao", "cereal", "fruta", "doce", "leguminosa"].indexOf(x.grupo) !== -1;
-      }
-      function distribuir(lista, attr, need) {
-        var dens = lista.map(function (x) { return (x[attr] / 100) * (parseFloat(x.porcao) || 100); });
-        var td = dens.reduce(function (a, b) { return a + b; }, 0);
-        if (td <= 0) return;
-        lista.forEach(function (x, i) {
-          var share = need * dens[i] / td;
-          var gramas = x[attr] > 0 ? share / (x[attr] / 100) : (parseFloat(x.porcao) || 100);
-          x.qtd = Math.max(gramas, (parseFloat(x.porcao) || 100) * 0.4);
-        });
-      }
-      var prot = it.filter(isProt);
-      var carb = it.filter(isCarb);
-      var outros = it.filter(function (x) { return !isProt(x); });
-      var needP = Math.max(pT - subnutri(outros)[1], 0);
-      if (prot.length && needP > 0) distribuir(prot, "p", needP);
-      var naoCarb = it.filter(function (x) { return !isCarb(x); });
-      var needC = Math.max(cT - subnutri(naoCarb)[2], 0);
-      if (carb.length && needC > 0) distribuir(carb, "c", needC);
-      var tot = subnutri(it);
-      var diff = kcalT - tot[0];
-      var fat = it.filter(function (x) { return x.grupo === "gordura"; });
-      if (fat.length && Math.abs(diff) > 2) {
-        var chef = fat.slice().sort(function (a, b) { return (b.k || 0) - (a.k || 0); })[0];
-        var ck = chef.k / 100;
-        if (ck > 0) {
-          var ng = chef.qtd + diff / ck;
-          chef.qtd = ng >= 0 ? ng : 0;
-        }
-        tot = subnutri(it);
-        diff = kcalT - tot[0];
-      }
-      if (Math.abs(diff) > 2) {
-        var cb = carb.reduce(function (s, x) { return s + (x.k / 100) * x.qtd; }, 0);
-        if (cb > 0) {
-          var fct = (kcalT - (tot[0] - cb)) / cb;
-          carb.forEach(function (x) { x.qtd = Math.max(0, x.qtd * fct); });
-        }
-      }
-      return it;
     };
 
-    function recalcularGramas() {
+    async function recalcularGramas() {
       var itens = marcadosInfo();
       var pre = document.getElementById("rf-previsao");
       if (!itens.length) {
@@ -232,11 +198,18 @@ document.addEventListener("DOMContentLoaded", function () {
       var m = metasRefeicao();
       var temMeta = m.some(function (v) { return v > 0; });
       var gramas = temMeta
-        ? window.calcularGramasJS(itens, m[0], m[1], m[2], m[3])
+        ? await window.calcularGramasJS(itens, m[0], m[1], m[2], m[3])
         : itens.map(function (x) { return Object.assign({}, x, { qtd: x.porcao }); });
       renderSugestoes(gramas);
       mostrarTotaisGramas(gramas);
       setQtdInputs(gramas);
+      var avisos = window.__rf_avisos || [];
+      if (avisos.length && pre) {
+        var avHtml = avisos.map(function (a) {
+          return '<span class="rf-aviso">' + a + "</span>";
+        }).join("<br>");
+        pre.innerHTML = pre.innerHTML + "<br>" + avHtml;
+      }
     }
 
     window.aplicarGramasSalvas = function (qtdMap) {
