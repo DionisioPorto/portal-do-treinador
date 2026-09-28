@@ -171,6 +171,7 @@
     form.action = alvo;
   }
   window.alternarModoTreino = alternarModoTreino;
+  alternarModoTreino("manual");
 
   /* --- Editar treino --- */
   window.abrirEdicaoTreino = function (id, nome, dia, ordem, notas) {

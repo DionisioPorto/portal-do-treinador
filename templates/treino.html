@@ -148,7 +148,7 @@
 
 <!-- NOVO/EDITAR TREINO -->
 <dialog id="form-novo-treino" class="modal">
-  <form method="post" id="form-novo-treino-action">
+  <form method="post" id="form-novo-treino-action" action="{{ url_for('novo_treino', aluno_id=aluno['id']) }}">
     <div class="modal-head">
       <h2>Novo treino</h2>
       <button type="button" class="modal-close" onclick="document.getElementById('form-novo-treino').close()">
