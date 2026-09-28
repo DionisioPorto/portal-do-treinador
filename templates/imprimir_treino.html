@@ -43,7 +43,7 @@
       {% if t['notas'] %}<p class="muted small" style="margin-top:-6px;">{{ t['notas'] }}</p>{% endif %}
       <table class="table">
         <thead>
-          <tr><th>Exercício</th><th>Séries</th><th>Repetições</th><th>Carga</th><th>Descanso</th></tr>
+          <tr><th>Exercício</th><th>Séries</th><th>Repetições</th><th>RIR</th><th>Descanso</th><th>Carga</th></tr>
         </thead>
         <tbody>
           {% for e in exercicios.get(t['id'], []) %}
@@ -51,11 +51,13 @@
             <td>
               <div class="strong">{{ e['nome'] }}</div>
               {% if e['grupo'] %}<div class="muted small">{{ e['grupo'] }}</div>{% endif %}
+              {% if e['observacoes'] %}<div class="muted small">{{ e['observacoes'] }}</div>{% endif %}
             </td>
             <td>{{ e['series'] or '—' }}</td>
             <td>{{ e['repeticoes'] or '—' }}</td>
-            <td>{{ e['carga'] or '—' }}</td>
+            <td>{{ e['rir'] or '—' }}</td>
             <td>{{ e['descanso'] or '—' }}</td>
+            <td>{{ e['carga'] or '—' }}</td>
           </tr>
           {% endfor %}
         </tbody>

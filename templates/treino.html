@@ -6,12 +6,20 @@
 <div class="page-head">
   <div>
     <h2 style="font-size:19px;">Treinos</h2>
-    <div class="muted small">Monte os treinos por dia da semana</div>
+    <div class="muted small">Monte treinos com modelos, biblioteca e assistente — você decide a prescrição final</div>
   </div>
   <div class="head-actions">
     <a class="btn ghost" href="{{ url_for('imprimir_treino', aluno_id=aluno['id']) }}" target="_blank">
       <svg class="icon"><use href="#i-printer"/></svg>Imprimir / PDF
     </a>
+    {% if outros_treinos %}
+    <button class="btn ghost" onclick="document.getElementById('form-copiar-treino').showModal()">
+      <svg class="icon"><use href="#i-copy"/></svg>Copiar treino existente
+    </button>
+    {% endif %}
+    <button class="btn ghost" onclick="document.getElementById('form-assistente').showModal()">
+      <svg class="icon"><use href="#i-zap"/></svg>Montar com assistente
+    </button>
     <button class="btn primary" onclick="document.getElementById('form-novo-treino').showModal()">
       <svg class="icon"><use href="#i-plus"/></svg>Novo treino
     </button>
@@ -21,17 +29,21 @@
 {% if treinos %}
 <div class="treinos-list">
   {% for t in treinos %}
-  <section class="card treino-card">
+  <section class="card treino-card" data-treino-id="{{ t['id'] }}">
     <div class="treino-head">
       <div>
         <h3 class="treino-nome">
           <svg class="icon" style="vertical-align:-3px; color:var(--accent);"><use href="#i-dumbbell"/></svg>
           {{ t['nome'] }}
           {% if t['dia_semana'] %}<span class="chip" style="margin-left:6px;">{{ t['dia_semana'] }}</span>{% endif %}
+          {% if t['ordem'] %}<span class="chip" style="margin-left:6px;">ordem {{ t['ordem'] }}</span>{% endif %}
         </h3>
         {% if t['notas'] %}<p class="muted small" style="margin:6px 0 0;">{{ t['notas'] }}</p>{% endif %}
       </div>
-      <div style="display:flex;gap:4px;">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="btn ghost small" onclick="duplicarTreino({{ t['id'] }})">
+          <svg class="icon"><use href="#i-copy"/></svg>Duplicar
+        </button>
         <button class="btn ghost small" onclick="abrirEdicaoTreino({{ t['id'] }}, '{{ t['nome'] | e }}', '{{ t['dia_semana'] | e }}', {{ t['ordem'] or 0 }}, '{{ t['notas'] | e }}')">
           <svg class="icon"><use href="#i-pencil"/></svg>
         </button>
@@ -45,35 +57,54 @@
 
     {% set exs = exercicios.get(t['id'], []) %}
     {% if exs %}
-    <table class="table">
+    <table class="table ordem-lista" data-treino-id="{{ t['id'] }}">
       <thead>
         <tr>
+          <th style="width:52px;">Ordem</th>
           <th>Exercício</th>
           <th>Séries</th>
           <th>Repetições</th>
-          <th>Carga</th>
+          <th>RIR</th>
           <th>Descanso</th>
+          <th>Carga</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         {% for e in exs %}
-        <tr>
+        <tr draggable="true" data-ex-id="{{ e['id'] }}">
+          <td class="ordem-handle strong">{{ loop.index }}</td>
           <td>
-            <div class="strong">{{ e['nome'] }}</div>
-            {% if e['grupo'] %}<div class="muted small">{{ e['grupo'] }}</div>{% endif %}
+            <div class="strong">
+              <span class="drag-ico" title="Arraste para reordenar">⠿</span>
+              {{ e['nome'] }}
+            </div>
+            {% if e['grupo'] %}<div class="muted small">{{ e['grupo'] }}{% if e['metodo_progressao'] %} · prog: {{ e['metodo_progressao'] }}{% endif %}</div>{% endif %}
+            {% if e['observacoes'] %}<div class="muted small" style="font-style:italic;">{{ e['observacoes'] }}</div>{% endif %}
           </td>
           <td>{{ e['series'] or '—' }}</td>
           <td>{{ e['repeticoes'] or '—' }}</td>
-          <td>{{ e['carga'] or '—' }}</td>
+          <td>{{ e['rir'] or '—' }}</td>
           <td>{{ e['descanso'] or '—' }}</td>
+          <td>{{ e['carga'] or '—' }}</td>
           <td class="actions-cell">
-            <div style="display:flex;gap:4px;">
-              <button class="btn ghost small" onclick="abrirEdicaoExercicio({{ e['id'] }}, '{{ e['nome'] | e }}', '{{ e['grupo'] | e }}', '{{ e['series'] | e }}', '{{ e['repeticoes'] | e }}', '{{ e['carga'] | e }}', '{{ e['descanso'] | e }}')">
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+              <button class="btn ghost small" title="Editar" onclick="abrirEdicaoExercicio({{
+                e['id'] }}, '{{ e['nome'] | e }}', '{{ e['grupo'] | e }}', '{{ e['series'] | e }}', '{{ e['repeticoes'] | e }}', '{{ e['carga'] | e }}', '{{ e['descanso'] | e }}', '{{ e['rir'] | e }}', '{{ e['observacoes'] | e }}', '{{ e['metodo_progressao'] | e }}')">
                 <svg class="icon"><use href="#i-pencil"/></svg>
               </button>
+              <form method="post" action="{{ url_for('duplicar_exercicio', exercicio_id=e['id']) }}" class="inline">
+                <button type="submit" class="btn ghost small" title="Duplicar">
+                  <svg class="icon"><use href="#i-copy"/></svg>
+                </button>
+              </form>
+              <button class="btn ghost small" title="Substituir" onclick="abrirSubstituicao({{ e['id'] }})">
+                <svg class="icon"><use href="#i-swap"/></svg>
+              </button>
               <form method="post" action="{{ url_for('excluir_exercicio', exercicio_id=e['id']) }}" class="confirmar" data-confirm="Excluir este exercício?">
-                <button type="submit" class="btn ghost danger small">Remover</button>
+                <button type="submit" class="btn ghost danger small" title="Remover">
+                  <svg class="icon"><use href="#i-x"/></svg>
+                </button>
               </form>
             </div>
           </td>
@@ -85,24 +116,17 @@
     <p class="muted empty">Nenhum exercício neste treino ainda.</p>
     {% endif %}
 
-    <details class="add-exercicio">
-      <summary>
-        <svg class="icon"><use href="#i-down"/></svg>Adicionar exercício
-      </summary>
-      <form method="post" action="{{ url_for('novo_exercicio', treino_id=t['id']) }}" class="grid-form">
-        <div class="field"><label>Exercício *</label><input name="nome" required placeholder="Supino reto"></div>
-        <div class="field"><label>Grupo muscular</label><input name="grupo" placeholder="Peito, Costas..."></div>
-        <div class="field"><label>Séries</label><input name="series" placeholder="4"></div>
-        <div class="field"><label>Repetições</label><input name="repeticoes" placeholder="8-12"></div>
-        <div class="field"><label>Carga</label><input name="carga" placeholder="20 kg"></div>
-        <div class="field"><label>Descanso</label><input name="descanso" placeholder="60s"></div>
-        <div class="form-actions span-all">
-          <button type="submit" class="btn primary small">
-            <svg class="icon"><use href="#i-plus"/></svg>Adicionar
-          </button>
-        </div>
-      </form>
-    </details>
+    <div class="add-exercicio" style="margin-top:12px;">
+      <div class="field" style="max-width:420px;">
+        <label>Adicionar da biblioteca (pesquise e clique)</label>
+        <input type="search" class="busca-lib" data-treino-id="{{ t['id'] }}"
+               placeholder="Digite: supino, remada, agachamento…" autocomplete="off">
+        <div class="busca-lib-results" data-treino-id="{{ t['id'] }}"></div>
+      </div>
+      <button class="btn ghost small" style="margin-top:6px;" onclick="abrirManual({{ t['id'] }})">
+        <svg class="icon"><use href="#i-plus"/></svg>Adicionar manualmente
+      </button>
+    </div>
   </section>
   {% endfor %}
 </div>
@@ -110,30 +134,57 @@
 <div class="card empty-state">
   <div class="empty-ico"><svg class="icon"><use href="#i-dumbbell"/></svg></div>
   <h3>Nenhum treino montado</h3>
-  <p>Comece criando o primeiro treino para este aluno.</p>
-  <button class="btn primary" onclick="document.getElementById('form-novo-treino').showModal()">
-    <svg class="icon"><use href="#i-plus"/></svg>Novo treino
-  </button>
+  <p>Comece do zero, usando um modelo ou com o assistente de montagem.</p>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+    <button class="btn primary" onclick="document.getElementById('form-novo-treino').showModal()">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo treino
+    </button>
+    <button class="btn ghost" onclick="document.getElementById('form-assistente').showModal()">
+      <svg class="icon"><use href="#i-zap"/></svg>Montar com assistente
+    </button>
+  </div>
 </div>
 {% endif %}
 
+<!-- NOVO/EDITAR TREINO -->
 <dialog id="form-novo-treino" class="modal">
-  <form method="post" action="{{ url_for('novo_treino', aluno_id=aluno['id']) }}">
+  <form method="post" id="form-novo-treino-action">
     <div class="modal-head">
       <h2>Novo treino</h2>
       <button type="button" class="modal-close" onclick="document.getElementById('form-novo-treino').close()">
         <svg class="icon"><use href="#i-x"/></svg>
       </button>
     </div>
-    <div class="field"><label for="nt-nome">Nome do treino *</label><input type="text" id="nt-nome" name="nome" required placeholder="Treino A" autofocus></div>
-    <div class="field-row">
-      <div class="field"><label for="nt-dia">Dias da semana</label><input type="text" id="nt-dia" name="dia_semana" placeholder="Segunda e Quinta"></div>
-      <div class="field"><label for="nt-ordem">Ordem</label><input type="number" id="nt-ordem" name="ordem" value="1"></div>
+    <div class="chips-row" style="margin-bottom:10px;">
+      <button type="button" class="btn small" data-modo="manual" onclick="alternarModoTreino('manual')" id="btn-modo-manual">Em branco</button>
+      <button type="button" class="btn small" data-modo="modelo" onclick="alternarModoTreino('modelo')" id="btn-modo-modelo">Usar modelo</button>
     </div>
-    <div class="field"><label for="nt-notas">Notas</label><textarea id="nt-notas" name="notas" rows="2" placeholder="Ex: foco em hipertrofia de peitoral"></textarea></div>
+    <div id="modo-manual">
+      <div class="field"><label for="nt-nome">Nome do treino *</label><input type="text" id="nt-nome" name="nome" required placeholder="Treino A" autofocus></div>
+      <div class="field-row">
+        <div class="field"><label for="nt-dia">Dias da semana</label><input type="text" id="nt-dia" name="dia_semana" placeholder="Segunda e Quinta"></div>
+        <div class="field"><label for="nt-ordem">Ordem</label><input type="number" id="nt-ordem" name="ordem" value="1"></div>
+      </div>
+      <div class="field"><label for="nt-notas">Notas</label><textarea id="nt-notas" name="notas" rows="2" placeholder="Ex: foco em hipertrofia de peitoral"></textarea></div>
+    </div>
+    <div id="modo-modelo" style="display:none;">
+      <div class="field"><label for="nm-nome">Nome do treino</label><input type="text" id="nm-nome" name="nome" placeholder="Ex: Push A (opcional)"></div>
+      <div class="field">
+        <label for="nm-modelo">Modelo</label>
+        <select id="nm-modelo" name="modelo">
+          {% for key, m in MODELOS_TREINO.items() %}
+          <option value="{{ key }}">{{ m['label'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="nm-dia">Dias da semana</label><input type="text" id="nm-dia" name="dia_semana" placeholder="Segunda e Quinta"></div>
+        <div class="field"><label for="nm-notas">Notas</label><input type="text" id="nm-notas" name="notas" placeholder="Opcional"></div>
+      </div>
+    </div>
     <div class="form-actions">
       <button type="button" class="btn ghost" onclick="document.getElementById('form-novo-treino').close()">Cancelar</button>
-      <button type="submit" class="btn primary">
+      <button type="submit" class="btn primary" id="btn-novo-treino-submit">
         <svg class="icon"><use href="#i-check"/></svg>Criar treino
       </button>
     </div>
@@ -163,6 +214,40 @@
   </form>
 </dialog>
 
+<!-- EXERCÍCIO MANUAL -->
+<dialog id="form-manual-exercicio" class="modal">
+  <form method="post" id="form-manual-exercicio-action">
+    <div class="modal-head">
+      <h2>Adicionar exercício</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-manual-exercicio').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label>Exercício *</label><input name="nome" required placeholder="Supino reto"></div>
+    <div class="field"><label>Grupo muscular</label><input name="grupo" placeholder="Peito, Costas..." list="lista-grupos"></div>
+    <datalist id="lista-grupos">
+      {% for g in GRUPOS_LIB %}<option value="{{ g }}">{% endfor %}
+    </datalist>
+    <div class="field-row">
+      <div class="field"><label>Séries</label><input name="series" placeholder="3"></div>
+      <div class="field"><label>Repetições</label><input name="repeticoes" placeholder="8-12"></div>
+      <div class="field"><label>RIR</label><input name="rir" placeholder="1-2"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Carga</label><input name="carga" placeholder="20 kg"></div>
+      <div class="field"><label>Descanso</label><input name="descanso" placeholder="90s"></div>
+    </div>
+    <div class="field"><label>Observações</label><textarea name="observacoes" rows="2" placeholder="Técnica, dica de execução..."></textarea></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-manual-exercicio').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-plus"/></svg>Adicionar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<!-- EDITAR EXERCÍCIO -->
 <dialog id="form-editar-exercicio" class="modal">
   <form method="post" id="form-editar-exercicio-action">
     <div class="modal-head">
@@ -172,15 +257,21 @@
       </button>
     </div>
     <div class="field"><label for="ee-nome">Exercício *</label><input type="text" id="ee-nome" name="nome" required></div>
-    <div class="field"><label for="ee-grupo">Grupo muscular</label><input type="text" id="ee-grupo" name="grupo"></div>
+    <div class="field"><label for="ee-grupo">Grupo muscular</label><input type="text" id="ee-grupo" name="grupo" list="lista-grupos-ee"></div>
+    <datalist id="lista-grupos-ee">
+      {% for g in GRUPOS_LIB %}<option value="{{ g }}">{% endfor %}
+    </datalist>
     <div class="field-row">
       <div class="field"><label for="ee-series">Séries</label><input type="text" id="ee-series" name="series"></div>
       <div class="field"><label for="ee-reps">Repetições</label><input type="text" id="ee-reps" name="repeticoes"></div>
+      <div class="field"><label for="ee-rir">RIR</label><input type="text" id="ee-rir" name="rir"></div>
     </div>
     <div class="field-row">
       <div class="field"><label for="ee-carga">Carga</label><input type="text" id="ee-carga" name="carga"></div>
       <div class="field"><label for="ee-descanso">Descanso</label><input type="text" id="ee-descanso" name="descanso"></div>
     </div>
+    <div class="field"><label for="ee-prog">Método de progressão</label><input type="text" id="ee-prog" name="metodo_progressao" placeholder="Ex: +2kg quando fizer 12 reps"></div>
+    <div class="field"><label for="ee-obs">Observações</label><textarea id="ee-obs" name="observacoes" rows="2"></textarea></div>
     <div class="form-actions">
       <button type="button" class="btn ghost" onclick="document.getElementById('form-editar-exercicio').close()">Cancelar</button>
       <button type="submit" class="btn primary">
@@ -190,26 +281,171 @@
   </form>
 </dialog>
 
+<!-- SUBSTITUIR EXERCÍCIO -->
+<dialog id="form-substituir" class="modal">
+  <div class="modal-head">
+    <h2><svg class="icon"><use href="#i-swap"/></svg>Substituir exercício</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('form-substituir').close()">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </button>
+  </div>
+  <p class="muted small">Séries, repetições, RIR e descanso atuais são <strong>preservados</strong> na troca.</p>
+  <div class="field">
+    <label>Pesquisar na biblioteca</label>
+    <input type="search" class="busca-subst" placeholder="supino, remada, agachamento…" autocomplete="off">
+    <div class="busca-lib-results busca-subst-results"></div>
+  </div>
+  <div class="form-actions">
+    <button type="button" class="btn ghost" onclick="document.getElementById('form-substituir').close()">Cancelar</button>
+  </div>
+</dialog>
+
+<!-- DUPLICAR TREINO -->
+<dialog id="form-duplicar-treino" class="modal">
+  <form method="post" id="form-duplicar-treino-action">
+    <div class="modal-head">
+      <h2>Duplicar treino</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-duplicar-treino').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <p class="muted small">Cria uma cópia independente com exercícios, ordem, séries, repetições, RIR, descanso e observações.</p>
+    <div class="field"><label for="dt-nome">Nome do novo treino</label><input type="text" id="dt-nome" name="nome" placeholder="Ex: Pull B (cópia)"></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-duplicar-treino').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Duplicar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<!-- COPIAR DE OUTRO ALUNO -->
+<dialog id="form-copiar-treino" class="modal">
+  <form method="post" action="{{ url_for('copiar_treino_outro_aluno', aluno_id=aluno['id']) }}">
+    <div class="modal-head">
+      <h2>Copiar treino existente</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-copiar-treino').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <p class="muted small">A cópia cria <strong>registros independentes</strong> — alterar aqui não afeta o original.</p>
+    <div class="field">
+      <label for="cp-aluno">Aluno de origem</label>
+      <select id="cp-aluno" name="aluno_origem">
+        {% for out in outros_treinos %}
+        <option value="{{ out['aluno']['id'] }}">{{ out['aluno']['nome'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="cp-treino">Treino de origem</label>
+      <select id="cp-treino" name="treino_origem"></select>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-copiar-treino').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Copiar para este aluno
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ASSISTENTE -->
+<dialog id="form-assistente" class="modal modal-wide">
+  <div class="modal-head">
+    <h2><svg class="icon"><use href="#i-zap"/></svg>Montar com assistente</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('form-assistente').close()">
+      <svg class="icon"><use href="#i-x"/></svg>
+    </button>
+  </div>
+  <div id="assistente-form" class="grid-form">
+    <div class="field">
+      <label>Objetivo</label>
+      <select id="as-objetivo">
+        {% for o in OBJETIVOS_TREINO %}
+        <option value="{{ o }}">{{ o }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Divisão</label>
+      <select id="as-divisao">
+        {% for key, m in MODELOS_TREINO.items() %}
+        <option value="{{ key }}">{{ m['label'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Nível</label>
+      <select id="as-nivel">
+        {% for n in NIVEIS_TREINO %}
+        <option value="{{ n }}">{{ n }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Duração estimada</label>
+      <select id="as-duracao">
+        {% for d in DURACOES_TREINO %}
+        <option value="{{ d }}" {{ 'selected' if d == '60' else '' }}>{{ d }} min</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Prioridade muscular (opcional)</label>
+      <div class="chips-row">
+        {% for g in GRUPOS_LIB %}
+        <label class="check-chip"><input type="checkbox" class="as-prior" value="{{ g }}"> {{ g }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="field">
+      <label>Equipamentos disponíveis</label>
+      <div class="chips-row">
+        {% for eq in EQUIPAMENTOS_LISTA %}
+        <label class="check-chip"><input type="checkbox" class="as-equip" value="{{ eq }}" checked> {{ eq }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="field span-all">
+      <label for="as-rest">Restrições / observações</label>
+      <input type="text" id="as-rest" placeholder="Ex: evitar cargas pesadas no ombro direito">
+    </div>
+    <div class="field span-all">
+      <button type="button" class="btn primary" onclick="gerarSugestao()">
+        <svg class="icon"><use href="#i-zap"/></svg>Montar sugestão
+      </button>
+    </div>
+  </div>
+  <div id="assistente-avisos" style="margin:10px 0;"></div>
+  <div id="assistente-preview" style="display:none;">
+    <h3 class="muted small" style="margin:0 0 8px;">Revisão da sugestão (edite antes de salvar)</h3>
+    <table class="table" style="width:100%;">
+      <thead>
+        <tr><th style="width:30px;">#</th><th>Exercício</th><th>Séries</th><th>Repetições</th><th>RIR</th><th>Descanso</th><th></th></tr>
+      </thead>
+      <tbody id="assistente-itens"></tbody>
+    </table>
+    <div class="field-row" style="margin-top:10px;">
+      <div class="field"><label>Nome do treino</label><input type="text" id="as-nome" placeholder="Ex: Push A"></div>
+      <div class="field"><label>Dias da semana</label><input type="text" id="as-dia" placeholder="Segunda e Quinta"></div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="gerarSugestao()">
+        <svg class="icon"><use href="#i-refresh"/></svg>Gerar de novo
+      </button>
+      <button type="button" class="btn primary" onclick="salvarSugestao()">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar treino
+      </button>
+    </div>
+  </div>
+</dialog>
+
 <script>
-function abrirEdicaoTreino(id, nome, dia, ordem, notas) {
-  var d = document.getElementById('form-editar-treino');
-  document.getElementById('form-editar-treino-action').action = '/aluno/{{ aluno["id"] }}/treino/' + id + '/editar';
-  document.getElementById('et-nome').value = nome;
-  document.getElementById('et-dia').value = dia;
-  document.getElementById('et-ordem').value = ordem;
-  document.getElementById('et-notas').value = notas;
-  d.showModal();
-}
-function abrirEdicaoExercicio(id, nome, grupo, series, reps, carga, descanso) {
-  var d = document.getElementById('form-editar-exercicio');
-  document.getElementById('form-editar-exercicio-action').action = '/exercicio/' + id + '/editar';
-  document.getElementById('ee-nome').value = nome;
-  document.getElementById('ee-grupo').value = grupo;
-  document.getElementById('ee-series').value = series;
-  document.getElementById('ee-reps').value = reps;
-  document.getElementById('ee-carga').value = carga;
-  document.getElementById('ee-descanso').value = descanso;
-  d.showModal();
-}
+{% if outros_treinos %}
+var OUTROS_TREINOS = {{ outros_treinos | tojson }};
+{% endif %}
 </script>
+<script src="{{ url_for('static', filename='js/treino.js') }}"></script>
 {% endblock %}

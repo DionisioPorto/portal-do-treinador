@@ -752,6 +752,245 @@ LIBRARY = [
     ("Panturrilha sentado", "Panturrilha", 0, 2, "12-15", "60s"),
 ]
 
+PADROES_MOVIMENTO = [
+    "Empurrar horizontal", "Empurrar vertical", "Puxar horizontal", "Puxar vertical",
+    "Agachar", "Articulação de quadril", "Afundo", "Extensão de joelhos",
+    "Flexão de joelhos", "Extensão de quadril", "Abdução de quadril", "Adução de quadril",
+    "Extensão de cotovelo", "Flexão de cotovelo", "Elevação lateral", "Elevação frontal",
+    "Adução horizontal", "Flexão de coluna (core)", "Isométrico", "Panturrilha",
+    "Encolhimento", "Outro",
+]
+
+EQUIPAMENTOS_LISTA = [
+    "Barra", "Halteres", "Polia/cabo", "Máquina", "Peso corporal", "Elástico", "Kettlebell",
+]
+NIVEIS_TREINO = ["Iniciante", "Intermediário", "Avançado"]
+OBJETIVOS_TREINO = ["Hipertrofia", "Força", "Resistência", "Outro"]
+DURACOES_TREINO = ["30", "45", "60", "75", "90"]
+
+META_OBJETIVO = {
+    "Hipertrofia": {"series": None, "repeticoes": None, "rir": None, "descanso": None},
+    "Força": {"series": 5, "repeticoes": "3-6", "rir": "0-1", "descanso": "150-180s"},
+    "Resistência": {"series": 3, "repeticoes": "15-20", "rir": "2-3", "descanso": "60s"},
+    "Outro": {"series": None, "repeticoes": None, "rir": None, "descanso": None},
+}
+
+MODELOS_TREINO = {
+    "push": {"label": "Push (Peito · Ombro · Tríceps)", "grupos": GRUPOS["push"][0]},
+    "pull": {"label": "Pull (Costas · Bíceps · Trapézio)", "grupos": GRUPOS["pull"][0]},
+    "legs": {"label": "Legs (Quadríceps · Posterior · Panturrilha)", "grupos": GRUPOS["legs"][0]},
+    "upper": {"label": "Upper (tronco completo)", "grupos": GRUPOS["upper"][0]},
+    "lower": {"label": "Lower (pernas completas)", "grupos": GRUPOS["lower"][0]},
+    "fullbody": {"label": "Full Body (corpo completo)", "grupos": GRUPOS["fullbody"][0]},
+}
+
+DETALHES_EXERCICIOS = {
+    "Supino reto com barra": {"grupo": "Peito", "grande": 1, "series": 3, "repeticoes": "6-8", "descanso": "120s",
+        "secundarios": "Tríceps, Deltoide anterior", "padrao": "Empurrar horizontal", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Cotovelos a ~45°; escápulas retraídas e apoiadas."},
+    "Supino inclinado com halteres": {"grupo": "Peito", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Deltoide anterior, Tríceps", "padrao": "Empurrar horizontal", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Banco ~30°; desça até o peitoral alongar."},
+    "Supino reto com halteres": {"grupo": "Peito", "grande": 1, "series": 3, "repeticoes": "8-12", "descanso": "120s",
+        "secundarios": "Tríceps, Deltoide anterior", "padrao": "Empurrar horizontal", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Variação com maior amplitude que a barra."},
+    "Supino máquina": {"grupo": "Peito", "grande": 1, "series": 3, "repeticoes": "10-12", "descanso": "90s",
+        "secundarios": "Tríceps, Deltoide anterior", "padrao": "Empurrar horizontal", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Ajuste o assento para alinhar a pegada ao peitoral."},
+    "Crucifixo com halteres": {"grupo": "Peito", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Deltoide anterior, Tríceps", "padrao": "Adução horizontal", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Braços quase estendidos; sinta o peitoral."},
+    "Crossover na polia": {"grupo": "Peito", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Deltoide anterior, Tríceps", "padrao": "Adução horizontal", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Pequena inclinação do tronco à frente."},
+    "Flexão de braços": {"grupo": "Peito", "grande": 1, "series": 3, "repeticoes": "10-15", "descanso": "60s",
+        "secundarios": "Tríceps, Deltoide anterior, Core", "padrao": "Empurrar horizontal", "equipamento": "Peso corporal",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Corpo em linha; cotovelos ~45° do tronco."},
+    "Puxada pela frente": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Bíceps, Posterior do ombro", "padrao": "Puxar vertical", "equipamento": "Polia/cabo",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Puxe até o peito; tronco estável."},
+    "Puxada fechada supinada": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Bíceps, Posterior do ombro", "padrao": "Puxar vertical", "equipamento": "Polia/cabo",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Pegada supinada fechada; puxe ao peito."},
+    "Puxada aberta (barra)": {"grupo": "Costas", "grande": 1, "series": 4, "repeticoes": "6-10", "descanso": "120s",
+        "secundarios": "Bíceps, Posterior do ombro", "padrao": "Puxar vertical", "equipamento": "Barra",
+        "nivel": "Avançado", "rir": "1-2", "observacoes": "Dominada com pegada aberta; não balançar."},
+    "Barra fixa prona": {"grupo": "Costas", "grande": 1, "series": 4, "repeticoes": "6-10", "descanso": "120s",
+        "secundarios": "Bíceps, Posterior do ombro", "padrao": "Puxar vertical", "equipamento": "Peso corporal",
+        "nivel": "Avançado", "rir": "1-2", "observacoes": "Assistência permitida (elástico/máquina)."},
+    "Remada curvada com barra": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Bíceps, Lombar, Posterior do ombro", "padrao": "Puxar horizontal", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Tronco inclinado ~45°; escápulas se aproximam."},
+    "Remada na polia baixa": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "8-12", "descanso": "120s",
+        "secundarios": "Bíceps, Posterior do ombro", "padrao": "Puxar horizontal", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Tronco estável; puxe sem compensar com a lombar."},
+    "Remada unilateral com halteres": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "8-12", "descanso": "90s",
+        "secundarios": "Bíceps, Posterior do ombro", "padrao": "Puxar horizontal", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Apoie uma mão no banco; tronco quase paralelo."},
+    "Remada máquina": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "10-12", "descanso": "90s",
+        "secundarios": "Bíceps, Posterior do ombro", "padrao": "Puxar horizontal", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Escápulas se aproximam no final do movimento."},
+    "Desenvolvimento militar": {"grupo": "Ombro", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Tríceps, Deltoide lateral, Trapézio superior", "padrao": "Empurrar vertical", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Core firme; não arqueie a lombar."},
+    "Desenvolvimento com halteres": {"grupo": "Ombro", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Tríceps, Deltoide lateral", "padrao": "Empurrar vertical", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Sente-se em banco com encosto para estabilizar."},
+    "Desenvolvimento máquina": {"grupo": "Ombro", "grande": 1, "series": 3, "repeticoes": "10-12", "descanso": "90s",
+        "secundarios": "Tríceps, Deltoide lateral", "padrao": "Empurrar vertical", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Ajuste o encosto para os ombros."},
+    "Elevação lateral": {"grupo": "Ombro", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Trapézio superior, Serrátil", "padrao": "Elevação lateral", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Sem balanço; controle na descida."},
+    "Elevação lateral na polia": {"grupo": "Ombro", "grande": 0, "series": 3, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Trapézio superior", "padrao": "Elevação lateral", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Tensão constante durante todo o movimento."},
+    "Elevação frontal": {"grupo": "Ombro", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Deltoide lateral", "padrao": "Elevação frontal", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Eleve até a altura dos ombros apenas."},
+    "Encolhimento com halteres": {"grupo": "Trapézio", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Encolhimento", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Subida e descida controladas; sem rotação dos ombros."},
+    "Rosca direta com barra": {"grupo": "Bíceps", "grande": 0, "series": 2, "repeticoes": "10-12", "descanso": "75s",
+        "secundarios": "Antebraço, Braquial", "padrao": "Flexão de cotovelo", "equipamento": "Barra",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Cotovelos fixos ao tronco; sem balanço."},
+    "Rosca alternada com halteres": {"grupo": "Bíceps", "grande": 0, "series": 2, "repeticoes": "12", "descanso": "75s",
+        "secundarios": "Antebraço, Braquial", "padrao": "Flexão de cotovelo", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Supine o punho na subida."},
+    "Rosca martelo": {"grupo": "Bíceps", "grande": 0, "series": 2, "repeticoes": "12", "descanso": "75s",
+        "secundarios": "Braquiorradial, Antebraço", "padrao": "Flexão de cotovelo", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Pegada neutra (palmas para dentro)."},
+    "Rosca scott": {"grupo": "Bíceps", "grande": 0, "series": 3, "repeticoes": "10-12", "descanso": "75s",
+        "secundarios": "Braquial, Antebraço", "padrao": "Flexão de cotovelo", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Braços apoiados no banco; sem descolar na subida."},
+    "Tríceps na polia (corda)": {"grupo": "Tríceps", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Extensão de cotovelo", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Cotovelos fixos; estenda até o final."},
+    "Tríceps testa": {"grupo": "Tríceps", "grande": 0, "series": 2, "repeticoes": "10-12", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Extensão de cotovelo", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Cotovelos apontando para frente; controle na descida."},
+    "Tríceps banco (fundo)": {"grupo": "Tríceps", "grande": 0, "series": 3, "repeticoes": "10-15", "descanso": "75s",
+        "secundarios": "Peitoral, Deltoide anterior", "padrao": "Extensão de cotovelo", "equipamento": "Peso corporal",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Desça até os cotovelos à ~90°; não deixe os ombros caírem."},
+    "Paralelas": {"grupo": "Tríceps", "grande": 1, "series": 3, "repeticoes": "8-12", "descanso": "90s",
+        "secundarios": "Peitoral, Deltoide anterior", "padrao": "Extensão de cotovelo", "equipamento": "Peso corporal",
+        "nivel": "Avançado", "rir": "1-2", "observacoes": "Tronco levemente inclinado para ênfase no peitoral."},
+    "Agachamento livre": {"grupo": "Quadríceps", "grande": 1, "series": 3, "repeticoes": "6-8", "descanso": "150s",
+        "secundarios": "Posterior, Glúteo, Abdômen", "padrao": "Agachar", "equipamento": "Barra",
+        "nivel": "Avançado", "rir": "1-2", "observacoes": "Profundidade controlada; joelhos alinhados aos pés."},
+    "Agachamento goblet": {"grupo": "Quadríceps", "grande": 1, "series": 3, "repeticoes": "10-12", "descanso": "120s",
+        "secundarios": "Glúteo, Core", "padrao": "Agachar", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Segure o halter junto ao peito; tronco ereto."},
+    "Leg press 45": {"grupo": "Quadríceps", "grande": 1, "series": 3, "repeticoes": "8-12", "descanso": "120s",
+        "secundarios": "Glúteo, Posterior", "padrao": "Agachar", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Não trave os joelhos no topo."},
+    "Leg press unilateral": {"grupo": "Quadríceps", "grande": 1, "series": 3, "repeticoes": "10-12", "descanso": "90s",
+        "secundarios": "Glúteo, Posterior", "padrao": "Agachar", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Corrija assimetrias de perna."},
+    "Cadeira extensora": {"grupo": "Quadríceps", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Extensão de joelhos", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Pausa de 1s no topo."},
+    "Afundo búlgaro": {"grupo": "Quadríceps", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Glúteo, Posterior, Abdômen", "padrao": "Afundo", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Tronco vertical; pé de trás sobre o banco."},
+    "Levantamento terra romeno": {"grupo": "Posterior", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "150s",
+        "secundarios": "Glúteo, Lombar, Trapézio", "padrao": "Articulação de quadril", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Coluna neutra; quadris para trás."},
+    "Stiff com barra": {"grupo": "Posterior", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Glúteo, Lombar", "padrao": "Articulação de quadril", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Joelhos semiflexionados; sinta o alongamento posterior."},
+    "Mesa flexora": {"grupo": "Posterior", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Flexão de joelhos", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Controle na descida (fase excêntrica)."},
+    "Cadeira flexora": {"grupo": "Posterior", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Flexão de joelhos", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Pés apoiados; quadril colado ao banco."},
+    "Hip thrust": {"grupo": "Glúteo", "grande": 1, "series": 3, "repeticoes": "10-12", "descanso": "120s",
+        "secundarios": "Posterior, Abdômen", "padrao": "Extensão de quadril", "equipamento": "Barra",
+        "nivel": "Avançado", "rir": "1-2", "observacoes": "Empurre com os calcanhares; extensão máxima do quadril."},
+    "Elevação pélvica (peso corporal)": {"grupo": "Glúteo", "grande": 0, "series": 3, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Posterior, Abdômen", "padrao": "Extensão de quadril", "equipamento": "Peso corporal",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Variação do hip thrust para iniciar a progressão."},
+    "Cadeira abdutora": {"grupo": "Glúteo", "grande": 0, "series": 2, "repeticoes": "15", "descanso": "75s",
+        "secundarios": "Glúteo médio", "padrao": "Abdução de quadril", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Controle; não deixe o peso 'bater'."},
+    "Coice na polia": {"grupo": "Glúteo", "grande": 0, "series": 2, "repeticoes": "15", "descanso": "75s",
+        "secundarios": "Posterior", "padrao": "Extensão de quadril", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Não arquear a lombar na extensão."},
+    "Prancha": {"grupo": "Abdômen", "grande": 0, "series": 2, "repeticoes": "30-45s", "descanso": "60s",
+        "secundarios": "Ombro, Glúteo", "padrao": "Isométrico", "equipamento": "Peso corporal",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Corpo em linha; não deixe o quadril cair."},
+    "Prancha lateral": {"grupo": "Abdômen", "grande": 0, "series": 2, "repeticoes": "30-45s", "descanso": "60s",
+        "secundarios": "Oblíquos, Ombro", "padrao": "Isométrico", "equipamento": "Peso corporal",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Quadril alinhado; cotovelo sob o ombro."},
+    "Elevação de pernas": {"grupo": "Abdômen", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "60s",
+        "secundarios": "Flexores de quadril", "padrao": "Flexão de coluna (core)", "equipamento": "Peso corporal",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Lombar colada ao chão/banco."},
+    "Abdominal na polia": {"grupo": "Abdômen", "grande": 0, "series": 3, "repeticoes": "12-15", "descanso": "60s",
+        "secundarios": "Oblíquos", "padrao": "Flexão de coluna (core)", "equipamento": "Polia/cabo",
+        "nivel": "Intermediário", "rir": "2-3", "observacoes": "Curve a coluna torácica; não puxe só com os braços."},
+    "Panturrilha em pé": {"grupo": "Panturrilha", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "60s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Panturrilha", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Amplitude completa; pausa no topo."},
+    "Panturrilha sentado": {"grupo": "Panturrilha", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "60s",
+        "secundarios": "Sóleo", "padrao": "Panturrilha", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Enfatiza o sóleo; controle na descida."},
+    "Supino declinado com barra": {"grupo": "Peito", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Tríceps, Deltoide anterior", "padrao": "Empurrar horizontal", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Ênfase no peitoral inferior; mantenha os pés fixos."},
+    "Peck deck": {"grupo": "Peito", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Deltoide anterior", "padrao": "Adução horizontal", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Ajuste o encosto; movimento sem rebater os pesos."},
+    "Voador com halteres": {"grupo": "Peito", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Deltoide anterior", "padrao": "Adução horizontal", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "2-3", "observacoes": "Cotovelos levemente flexionados e fixos."},
+    "Puxada com corda (polia)": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "10-12", "descanso": "90s",
+        "secundarios": "Bíceps, Posterior", "padrao": "Puxar vertical", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "1-2", "observacoes": "Mantenha o tronco ereto; puxe com os cotovelos."},
+    "Remada T (cavalinho)": {"grupo": "Costas", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Bíceps, Posterior, Lombar", "padrao": "Puxar horizontal", "equipamento": "Barra",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Tronco próximo de 45°; escápulas retraídas."},
+    "Crucifixo inverso na polia": {"grupo": "Costas", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Deltoide posterior, Trapézio", "padrao": "Adução horizontal", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Deltoide posterior; abra até a linha dos ombros."},
+    "Desenvolvimento Arnold": {"grupo": "Ombro", "grande": 1, "series": 3, "repeticoes": "8-12", "descanso": "120s",
+        "secundarios": "Tríceps, Trapézio", "padrao": "Empurrar vertical", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Rotações das palmas durante o movimento."},
+    "Elevação posterior no crossover": {"grupo": "Ombro", "grande": 0, "series": 2, "repeticoes": "12-15", "descanso": "75s",
+        "secundarios": "Trapézio, Deltoide posterior", "padrao": "Adução horizontal", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Deltoide posterior; sem balanço de tronco."},
+    "Encolhimento com barra": {"grupo": "Trapézio", "grande": 0, "series": 2, "repeticoes": "10-12", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Encolhimento", "equipamento": "Barra",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Suba os ombros em linha reta; sem rotação."},
+    "Rosca concentrada": {"grupo": "Bíceps", "grande": 0, "series": 3, "repeticoes": "10-12", "descanso": "75s",
+        "secundarios": "Braquial, Antebraço", "padrao": "Flexão de cotovelo", "equipamento": "Halteres",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Cotovelo apoiado; contração máxima no topo."},
+    "Rosca no banco inclinado": {"grupo": "Bíceps", "grande": 0, "series": 3, "repeticoes": "10-12", "descanso": "75s",
+        "secundarios": "Braquial, Antebraço", "padrao": "Flexão de cotovelo", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "2-3", "observacoes": "Banco ~45°; alonga bem o bíceps na descida."},
+    "Tríceps francês com halteres": {"grupo": "Tríceps", "grande": 0, "series": 3, "repeticoes": "10-12", "descanso": "75s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Extensão de cotovelo", "equipamento": "Halteres",
+        "nivel": "Intermediário", "rir": "2-3", "observacoes": "Cotovelos fixos apontando para cima."},
+    "Tríceps na polia com barra reta": {"grupo": "Tríceps", "grande": 0, "series": 3, "repeticoes": "12-15", "descanso": "60s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Extensão de cotovelo", "equipamento": "Polia/cabo",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Cotovelos junto ao corpo durante todo o movimento."},
+    "Agachamento frontal com barra": {"grupo": "Quadríceps", "grande": 1, "series": 3, "repeticoes": "6-8", "descanso": "150s",
+        "secundarios": "Glúteo, Core", "padrao": "Agachar", "equipamento": "Barra",
+        "nivel": "Avançado", "rir": "0-1", "observacoes": "Cotovelos altos e core rígido; tórax ereto."},
+    "Agachamento hack": {"grupo": "Quadríceps", "grande": 1, "series": 3, "repeticoes": "8-10", "descanso": "120s",
+        "secundarios": "Glúteo", "padrao": "Agachar", "equipamento": "Máquina",
+        "nivel": "Intermediário", "rir": "1-2", "observacoes": "Pés apoiados na plataforma; depth confortável."},
+    "Levantamento terra (pegada sumô)": {"grupo": "Posterior", "grande": 1, "series": 3, "repeticoes": "6-8", "descanso": "150s",
+        "secundarios": "Glúteo, Quadríceps, Lombar", "padrao": "Articulação de quadril", "equipamento": "Barra",
+        "nivel": "Avançado", "rir": "0-1", "observacoes": "Pés afastados; empurre o chão para longe."},
+    "Crunch na máquina": {"grupo": "Abdômen", "grande": 0, "series": 3, "repeticoes": "12-15", "descanso": "60s",
+        "secundarios": "Sem secundários relevantes", "padrao": "Flexão de coluna (core)", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Flexione a coluna; expira na contração."},
+    "Adução de quadril na máquina": {"grupo": "Glúteo", "grande": 0, "series": 2, "repeticoes": "15", "descanso": "60s",
+        "secundarios": "Adutores", "padrao": "Adução de quadril", "equipamento": "Máquina",
+        "nivel": "Iniciante", "rir": "2-3", "observacoes": "Mantenha o encosto encostado; controle na volta."},
+}
+
 
 CATEGORIAS = [
     "Carboidratos", "Proteínas", "Laticínios", "Verduras e Legumes",
@@ -1389,6 +1628,28 @@ def migrar():
     cols_ra = [r["name"] for r in con.execute("PRAGMA table_info(refeicao_alimentos)").fetchall()]
     if "qtd" not in cols_ra:
         con.execute("ALTER TABLE refeicao_alimentos ADD COLUMN qtd REAL DEFAULT 0")
+    cols_ep = [r["name"] for r in con.execute("PRAGMA table_info(exercicios_padrao)").fetchall()]
+    novas_ep = {
+        "secundarios": "TEXT",
+        "padrao": "TEXT",
+        "equipamento": "TEXT",
+        "nivel": "TEXT",
+        "rir": "TEXT",
+        "observacoes": "TEXT",
+        "ativo": "INTEGER DEFAULT 1",
+    }
+    for col, tipo in novas_ep.items():
+        if col not in cols_ep:
+            con.execute(f"ALTER TABLE exercicios_padrao ADD COLUMN {col} {tipo}")
+    cols_ex = [r["name"] for r in con.execute("PRAGMA table_info(exercicios)").fetchall()]
+    novas_ex = {
+        "rir": "TEXT",
+        "observacoes": "TEXT",
+        "metodo_progressao": "TEXT",
+    }
+    for col, tipo in novas_ex.items():
+        if col not in cols_ex:
+            con.execute(f"ALTER TABLE exercicios ADD COLUMN {col} {tipo}")
     con.commit()
 
 
@@ -1401,6 +1662,81 @@ def seed_library():
             "INSERT INTO exercicios_padrao (nome, grupo, grande, series, repeticoes, descanso) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (nome, grupo, grande, series, rep, desc),
+        )
+    con.commit()
+
+
+def seed_library_v2():
+    """Enriquece a biblioteca com os campos novos (movimento, equipamento,
+    nível, RIR, observações) e adiciona exercícios extras. Idempotente."""
+    con = get_db()
+    cols = [r["name"] for r in con.execute("PRAGMA table_info(exercicios_padrao)").fetchall()]
+    if "padrao" not in cols:
+        return
+    for nome, d in DETALHES_EXERCICIOS.items():
+        existe = con.execute(
+            "SELECT COUNT(*) AS n FROM exercicios_padrao WHERE nome = ?", (nome,)
+        ).fetchone()["n"]
+        if existe:
+            con.execute(
+                """UPDATE exercicios_padrao
+                   SET grupo = ?, grande = ?, series = ?, repeticoes = ?, descanso = ?,
+                       secundarios = ?, padrao = ?, equipamento = ?, nivel = ?, rir = ?,
+                       observacoes = ?, ativo = 1
+                   WHERE nome = ?""",
+                (d["grupo"], 1 if d["grande"] else 0, d["series"], d["repeticoes"], d["descanso"],
+                 d["secundarios"], d["padrao"], d["equipamento"], d["nivel"], d["rir"],
+                 d["observacoes"], nome),
+            )
+        else:
+            con.execute(
+                """INSERT INTO exercicios_padrao
+                   (nome, grupo, grande, series, repeticoes, descanso, secundarios, padrao,
+                    equipamento, nivel, rir, observacoes, ativo)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)""",
+                (nome, d["grupo"], 1 if d["grande"] else 0, d["series"], d["repeticoes"],
+                 d["descanso"], d["secundarios"], d["padrao"], d["equipamento"], d["nivel"],
+                 d["rir"], d["observacoes"]),
+            )
+    # Backfill: enriquece qualquer exercício que ainda não tenha os campos novos
+    # (cobre exercícios antigos da biblioteca e os criados pelo próprio treinador).
+    PADRAO_POR_GRUPO = {
+        "Peito": "Empurrar horizontal", "Costas": "Puxar vertical", "Ombro": "Empurrar vertical",
+        "Bíceps": "Flexão de cotovelo", "Tríceps": "Extensão de cotovelo",
+        "Quadríceps": "Agachar", "Posterior": "Articulação de quadril",
+        "Glúteo": "Extensão de quadril", "Abdômen": "Flexão de coluna (core)",
+        "Panturrilha": "Panturrilha", "Trapézio": "Encolhimento", "Core": "Isométrico",
+    }
+    EQUIP_POR_PADRAO = {
+        "Agachar": "Barra", "Articulação de quadril": "Barra", "Afundo": "Halteres",
+        "Isométrico": "Peso corporal", "Flexão de coluna (core)": "Peso corporal",
+        "Extensão de joelhos": "Máquina", "Flexão de joelhos": "Máquina",
+        "Extensão de quadril": "Máquina", "Abdução de quadril": "Máquina",
+        "Adução de quadril": "Máquina",
+    }
+    SECUND_POR_GRUPO = {
+        "Peito": "Tríceps, Deltoide anterior", "Costas": "Bíceps, Posterior",
+        "Ombro": "Tríceps, Trapézio", "Quadríceps": "Glúteo",
+        "Posterior": "Glúteo, Quadríceps", "Glúteo": "Posterior", "Bíceps": "Antebraço",
+        "Tríceps": "Peito, Deltoide posterior",
+    }
+    por_preencher = con.execute(
+        """SELECT id, nome, grupo, grande FROM exercicios_padrao
+           WHERE padrao IS NULL OR nivel IS NULL OR rir IS NULL OR equipamento IS NULL"""
+    ).fetchall()
+    for e in por_preencher:
+        padrao = PADRAO_POR_GRUPO.get((e["grupo"] or "").strip().title(), "Outro")
+        con.execute(
+            """UPDATE exercicios_padrao
+               SET padrao = ?, nivel = ?, rir = ?, equipamento = ?,
+                   secundarios = COALESCE(NULLIF(secundarios, ''), ?),
+                   observacoes = COALESCE(observacoes, ''),
+                   ativo = 1,
+                   grande = CASE WHEN grande IS NULL THEN ? ELSE grande END
+               WHERE id = ?""",
+            (padrao, "Intermediário", "0-2" if e["grande"] else "2-3",
+             EQUIP_POR_PADRAO.get(padrao, "Barra"), SECUND_POR_GRUPO.get((e["grupo"] or "").strip().title(), ""),
+             1 if e["grande"] else 0, e["id"]),
         )
     con.commit()
 
@@ -1480,6 +1816,201 @@ def selecionar_exercicios(con, template):
     return treinos
 
 
+def buscar_exercicios(con, q="", limite=25):
+    q = (q or "").strip().lower()
+    rows = con.execute(
+        "SELECT * FROM exercicios_padrao WHERE ativo = 1 ORDER BY grupo, nome"
+    ).fetchall()
+    if not q:
+        return rows[:limite]
+    termos = [t for t in re.split(r"[^a-zà-ú0-9]+", q) if len(t) >= 2]
+    res = []
+    for e in rows:
+        bloco = " ".join([
+            (e["nome"] or ""), (e["grupo"] or ""), (e["padrao"] or ""),
+            (e["secundarios"] or ""), (e["equipamento"] or ""),
+        ]).lower()
+        if termos and all(t in bloco for t in termos) or all(t in (e["nome"] or "").lower() for t in termos):
+            res.append(e)
+        elif not termos and q in (e["nome"] or "").lower():
+            res.append(e)
+    res.sort(key=lambda e: (0 if (e["nome"] or "").lower().startswith(q) else 1, e["nome"] or ""))
+    return res[:limite]
+
+
+def _escolher_da_lista(cands, rot, usados):
+    candidatos = [c for c in cands if c["id"] not in usados]
+    if not candidatos:
+        return None
+    return candidatos[rot % len(candidatos)]
+
+
+def montar_sugestao(con, objetivo, divisao, nivel, duracao, prioridades, restricoes, equipamentos, rot=0):
+    """Monta uma sugestão de treino determinística (assistente, não autoridade).
+    Devolve {'itens': [...], 'avisos': [...]}; nada é gravado aqui."""
+    avisos = []
+    modelo = MODELOS_TREINO.get(divisao) or MODELOS_TREINO["fullbody"]
+    grupos = modelo["grupos"]
+    prior = [p for p in (prioridades or []) if p in GRUPOS_LIB]
+    n_alvo = {"30": 5, "45": 6, "60": 8, "75": 9, "90": 10}.get(str(duracao), 8)
+
+    exs = con.execute("SELECT * FROM exercicios_padrao WHERE ativo = 1").fetchall()
+    if not exs:
+        return {"itens": [], "avisos": ["Biblioteca de exercícios vazia. Cadastre exercícios primeiro."]}
+
+    termos = []
+    if restricoes:
+        termos = [t for t in re.split(r"[^a-zà-ú0-9]+", (restricoes or "").lower()) if len(t) >= 2]
+        avisos.append("Restrições: " + restricoes.strip() + ". Exercícios relacionados foram evitados.")
+    nivel_ordem = {"Iniciante": 0, "Intermediário": 1, "Avançado": 2}
+    max_nivel = nivel_ordem.get(nivel, 2)
+
+    def elegivel(e):
+        nome_l = (e["nome"] or "").lower()
+        if termos:
+            for t in termos:
+                if t in nome_l or t in (e["observacoes"] or "").lower() or t in (e["padrao"] or "").lower():
+                    return False
+        if equipamentos and e["equipamento"] and e["equipamento"] not in equipamentos:
+            return False
+        if e["nivel"] and nivel_ordem.get(e["nivel"], 2) > max_nivel:
+            return False
+        return True
+
+    pool = [e for e in exs if elegivel(e)]
+    if not pool:
+        return {"itens": [], "avisos": [
+            "Nenhum exercício disponível com os equipamentos, restrições ou nível escolhidos. Amplie os filtros.",
+        ]}
+
+    usados = set()
+    sequencia = []
+
+    def adicionar(e, tipo):
+        if e is None or e["id"] in usados:
+            return
+        usados.add(e["id"])
+        sequencia.append((tipo, e))
+
+    for g in prior:
+        cands = [e for e in pool if e["grupo"] == g]
+        adicionar(_escolher_da_lista(cands, rot, usados), "prioridade")
+    for g in grupos:
+        cands = [e for e in pool if e["grupo"] == g and e["grande"]]
+        adicionar(_escolher_da_lista(cands, rot, usados), "composto")
+    rodada = 0
+    while len(sequencia) < n_alvo:
+        parou = True
+        for g in grupos:
+            if len(sequencia) >= n_alvo:
+                break
+            cands = [e for e in pool if e["grupo"] == g and not e["grande"]]
+            e = _escolher_da_lista(cands, rot + rodada, usados)
+            if e is not None:
+                adicionar(e, "isolado")
+                parou = False
+        if parou:
+            break
+        rodada += 1
+    if len(sequencia) < n_alvo and len(pool) > len(sequencia):
+        for e in pool:
+            if len(sequencia) >= n_alvo:
+                break
+            adicionar(e, "composto")
+
+    if not sequencia:
+        avisos.append("Não foi possível montar a sugestão com os filtros atuais.")
+        return {"itens": [], "avisos": avisos}
+
+    meta = META_OBJETIVO.get(objetivo, META_OBJETIVO["Outro"])
+    itens = []
+    for tipo, e in sequencia[:n_alvo]:
+        series = meta["series"] if meta["series"] else (e["series"] or 3)
+        repeticoes = meta["repeticoes"] if meta["repeticoes"] else (e["repeticoes"] or "10-12")
+        rir = meta["rir"] if meta["rir"] else (e["rir"] or "1-2")
+        descanso = meta["descanso"] if meta["descanso"] else (e["descanso"] or "90s")
+        itens.append({
+            "ex_id": e["id"],
+            "nome": e["nome"],
+            "grupo": e["grupo"],
+            "padrao": e["padrao"] or "",
+            "series": series,
+            "repeticoes": repeticoes,
+            "rir": rir,
+            "descanso": descanso,
+            "carga": "",
+            "equipamento": e["equipamento"] or "",
+            "nivel": e["nivel"] or "",
+            "grande": e["grande"],
+            "secundarios": e["secundarios"] or "",
+            "observacoes": e["observacoes"] or "",
+        })
+    if len(sequencia) == len(pool) and len(itens) < n_alvo:
+        avisos.append(f"A biblioteca filtrada tem {len(itens)} exercícios; a sugestão ficou menor que a duração estimada.")
+    if objetivo == "Força" and nivel == "Iniciante":
+        avisos.append("Meta de força com aluno iniciante: considere validar a técnica antes de cargas altas.")
+    return {"itens": itens, "avisos": avisos}
+
+
+def duplicar_treino_db(con, treino_id, novo_nome=None):
+    t = con.execute("SELECT * FROM treinos WHERE id = ?", (treino_id,)).fetchone()
+    if not t:
+        return None
+    nome = (novo_nome or "").strip() or (t["nome"] and f"{t['nome']} (cópia)" or "Cópia")
+    cur = con.execute(
+        "INSERT INTO treinos (aluno_id, nome, dia_semana, notas, ordem) VALUES (?, ?, ?, ?, ?)",
+        (t["aluno_id"], nome, t["dia_semana"], t["notas"],
+         (t["ordem"] or 0) + 1),
+    )
+    novo_id = cur.lastrowid
+    for e in con.execute(
+        "SELECT * FROM exercicios WHERE treino_id = ? ORDER BY ordem, id", (treino_id,)
+    ).fetchall():
+        con.execute(
+            """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem, rir, observacoes, metodo_progressao)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (novo_id, e["nome"], e["series"], e["repeticoes"], e["carga"], e["descanso"], e["grupo"],
+             e["ordem"], e["rir"], e["observacoes"], e["metodo_progressao"]),
+        )
+    return novo_id
+
+
+def _txt(v):
+    return str(v).strip() if v is not None else ""
+
+
+def gravar_sugestao(con, aluno_id, nome, dia_semana, notas, itens):
+    cur = con.execute(
+        "INSERT INTO treinos (aluno_id, nome, dia_semana, notas, ordem) VALUES (?, ?, ?, ?, ?)",
+        (aluno_id, (nome or "").strip() or "Treino montado", (dia_semana or "").strip(),
+         (notas or "").strip(), 0),
+    )
+    treino_id = cur.lastrowid
+    for i, x in enumerate(itens, start=1):
+        ex_id = x.get("ex_id")
+        if ex_id:
+            e = con.execute("SELECT * FROM exercicios_padrao WHERE id = ?", (ex_id,)).fetchone()
+            if e:
+                con.execute(
+                    """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem, rir, observacoes)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (treino_id, _txt(x.get("nome")) or e["nome"],
+                     _txt(x.get("series")), _txt(x.get("repeticoes")),
+                     _txt(x.get("carga")), _txt(x.get("descanso")),
+                     _txt(x.get("grupo")) or e["grupo"], i,
+                     _txt(x.get("rir")), _txt(x.get("observacoes"))),
+                )
+                continue
+        con.execute(
+            """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem, rir, observacoes)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (treino_id, _txt(x.get("nome")) or "Exercício", _txt(x.get("series")),
+             _txt(x.get("repeticoes")), _txt(x.get("carga")), _txt(x.get("descanso")),
+             _txt(x.get("grupo")), i, _txt(x.get("rir")), _txt(x.get("observacoes"))),
+        )
+    return treino_id
+
+
 def get_aluno_or_404(aluno_id):
     con = get_db()
     a = con.execute("SELECT * FROM alunos WHERE id = ?", (aluno_id,)).fetchone()
@@ -1506,6 +2037,12 @@ def inject_helpers():
         DESPESA_CATEGORIAS=DESPESA_CATEGORIAS,
         MEDIDAS=MEDIDAS,
         MEDIDAS_GRAFICO=MEDIDAS_GRAFICO,
+        MODELOS_TREINO=MODELOS_TREINO,
+        NIVEIS_TREINO=NIVEIS_TREINO,
+        DURACOES_TREINO=DURACOES_TREINO,
+        EQUIPAMENTOS_LISTA=EQUIPAMENTOS_LISTA,
+        OBJETIVOS_TREINO=OBJETIVOS_TREINO,
+        PADROES_MOVIMENTO=PADROES_MOVIMENTO,
         hoje=datetime.date.today().isoformat(),
     )
 
@@ -1603,6 +2140,7 @@ with app.app_context():
     init_db()
     migrar()
     seed_library()
+    seed_library_v2()
     seed_alimentos()
     atualizar_nutri()
     seed()
@@ -1839,9 +2377,26 @@ def treino(aluno_id):
         exercicios[t["id"]] = con.execute(
             "SELECT * FROM exercicios WHERE treino_id = ? ORDER BY ordem, id", (t["id"],)
         ).fetchall()
+    lib = con.execute(
+        "SELECT * FROM exercicios_padrao WHERE ativo = 1 ORDER BY grupo, nome"
+    ).fetchall()
+    outros_treinos = []
+    if aluno_id:
+        for out in con.execute(
+            "SELECT id, nome FROM alunos WHERE id != ? ORDER BY nome", (aluno_id,)
+        ).fetchall():
+            ts = con.execute(
+                "SELECT id, nome, dia_semana FROM treinos WHERE aluno_id = ? ORDER BY ordem, id",
+                (out["id"],),
+            ).fetchall()
+            if ts:
+                outros_treinos.append({
+                    "aluno": dict(out),
+                    "treinos": [dict(t) for t in ts],
+                })
     return render_template(
         "treino.html", active="alunos", aba="treino", aluno=a,
-        treinos=treinos, exercicios=exercicios,
+        treinos=treinos, exercicios=exercicios, lib=lib, outros_treinos=outros_treinos,
     )
 
 
@@ -1932,19 +2487,224 @@ def editar_exercicio(exercicio_id):
         nome = request.form.get("nome", "").strip()
         if nome:
             con.execute(
-                """UPDATE exercicios SET nome = ?, series = ?, repeticoes = ?, carga = ?, descanso = ?, grupo = ?
-                   WHERE id = ?""",
+                """UPDATE exercicios SET nome = ?, series = ?, repeticoes = ?, carga = ?, descanso = ?, grupo = ?,
+                   rir = ?, observacoes = ?, metodo_progressao = ? WHERE id = ?""",
                 (nome, request.form.get("series", "").strip(),
                  request.form.get("repeticoes", "").strip(),
                  request.form.get("carga", "").strip(),
                  request.form.get("descanso", "").strip(),
-                 request.form.get("grupo", "").strip(), exercicio_id),
+                 request.form.get("grupo", "").strip(),
+                 request.form.get("rir", "").strip(),
+                 request.form.get("observacoes", "").strip(),
+                 request.form.get("metodo_progressao", "").strip() or None, exercicio_id),
             )
             con.commit()
             flash("Exercício atualizado.", "success")
         if t:
             return redirect(url_for("treino", aluno_id=t["aluno_id"]))
     return redirect(url_for("alunos"))
+
+
+@app.route("/exercicios/buscar")
+def buscar_exercicios_rota():
+    con = get_db()
+    res = buscar_exercicios(con, request.args.get("q", ""), 25)
+    return {
+        "itens": [
+            {
+                "id": e["id"], "nome": e["nome"], "grupo": e["grupo"],
+                "padrao": e["padrao"] or "", "equipamento": e["equipamento"] or "",
+                "nivel": e["nivel"] or "", "grande": e["grande"],
+                "series": e["series"], "repeticoes": e["repeticoes"] or "",
+                "descanso": e["descanso"] or "", "rir": e["rir"] or "",
+                "observacoes": e["observacoes"] or "",
+            }
+            for e in res
+        ],
+    }
+
+
+@app.route("/treino/<int:treino_id>/exercicio/padrao", methods=["POST"])
+def novo_exercicio_padrao_no_treino(treino_id):
+    con = get_db()
+    t = con.execute("SELECT aluno_id FROM treinos WHERE id = ?", (treino_id,)).fetchone()
+    ex_id = intnum(request.form.get("ex_id"))
+    if t and ex_id:
+        e = con.execute("SELECT * FROM exercicios_padrao WHERE id = ? AND ativo = 1", (ex_id,)).fetchone()
+        if e:
+            ultima = con.execute(
+                "SELECT COALESCE(MAX(ordem), 0) AS m FROM exercicios WHERE treino_id = ?", (treino_id,)
+            ).fetchone()["m"]
+            con.execute(
+                """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem, rir, observacoes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (treino_id, e["nome"], e["series"], e["repeticoes"], "", e["descanso"],
+                 e["grupo"], (ultima or 0) + 1, e["rir"], e["observacoes"]),
+            )
+            con.commit()
+            flash(f"{e['nome']} adicionado ao treino.", "success")
+            return redirect(url_for("treino", aluno_id=t["aluno_id"]))
+    return redirect(url_for("treino", aluno_id=t["aluno_id"])) if t else redirect(url_for("alunos"))
+
+
+@app.route("/exercicio/<int:exercicio_id>/duplicar", methods=["POST"])
+def duplicar_exercicio(exercicio_id):
+    con = get_db()
+    e = con.execute("SELECT * FROM exercicios WHERE id = ?", (exercicio_id,)).fetchone()
+    if not e:
+        return redirect(url_for("alunos"))
+    t = con.execute("SELECT aluno_id FROM treinos WHERE id = ?", (e["treino_id"],)).fetchone()
+    ultima = con.execute(
+        "SELECT COALESCE(MAX(ordem), 0) AS m FROM exercicios WHERE treino_id = ?", (e["treino_id"],)
+    ).fetchone()["m"]
+    con.execute(
+        """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem, rir, observacoes, metodo_progressao)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (e["treino_id"], e["nome"], e["series"], e["repeticoes"], e["carga"], e["descanso"],
+         e["grupo"], (ultima or 0) + 1, e["rir"], e["observacoes"], e["metodo_progressao"]),
+    )
+    con.commit()
+    flash("Exercício duplicado.", "info")
+    return redirect(url_for("treino", aluno_id=t["aluno_id"])) if t else redirect(url_for("alunos"))
+
+
+@app.route("/exercicio/<int:exercicio_id>/substituir", methods=["POST"])
+def substituir_exercicio(exercicio_id):
+    con = get_db()
+    e = con.execute("SELECT * FROM exercicios WHERE id = ?", (exercicio_id,)).fetchone()
+    if not e:
+        return redirect(url_for("alunos"))
+    t = con.execute("SELECT aluno_id FROM treinos WHERE id = ?", (e["treino_id"],)).fetchone()
+    ex_id = intnum(request.form.get("ex_id"))
+    if ex_id:
+        novo = con.execute(
+            "SELECT * FROM exercicios_padrao WHERE id = ? AND ativo = 1", (ex_id,)
+        ).fetchone()
+        if novo:
+            con.execute(
+                """UPDATE exercicios SET nome = ?, grupo = ?, observacoes = ? WHERE id = ?""",
+                (novo["nome"], novo["grupo"], novo["observacoes"] or e["observacoes"], exercicio_id),
+            )
+            con.commit()
+            flash(f"Substituído por {novo['nome']} (séries/reps/RIR/descanso preservados).", "success")
+    return redirect(url_for("treino", aluno_id=t["aluno_id"])) if t else redirect(url_for("alunos"))
+
+
+@app.route("/treino/<int:treino_id>/exercicios/ordem", methods=["POST"])
+def reordenar_exercicios(treino_id):
+    con = get_db()
+    t = con.execute("SELECT aluno_id FROM treinos WHERE id = ?", (treino_id,)).fetchone()
+    if not t:
+        return {"ok": False, "erro": "Treino não encontrado."}
+    dados = request.get_json(silent=True) or {}
+    ids = dados.get("ids") or []
+    existentes = {r["id"] for r in con.execute(
+        "SELECT id FROM exercicios WHERE treino_id = ?", (treino_id,)
+    ).fetchall()}
+    if ids and set(ids) == existentes and len(ids) == len(existentes):
+        for i, eid in enumerate(ids, start=1):
+            con.execute("UPDATE exercicios SET ordem = ? WHERE id = ?", (i, eid))
+        con.commit()
+        return {"ok": True}
+    return {"ok": False, "erro": "Lista de exercícios incompatível."}
+
+
+@app.route("/treino/<int:treino_id>/duplicar", methods=["POST"])
+def duplicar_treino(treino_id):
+    con = get_db()
+    t = con.execute("SELECT * FROM treinos WHERE id = ?", (treino_id,)).fetchone()
+    if not t:
+        return redirect(url_for("alunos"))
+    duplicar_treino_db(con, treino_id, request.form.get("nome"))
+    con.commit()
+    flash("Treino duplicado (cópia independente).", "success")
+    return redirect(url_for("treino", aluno_id=t["aluno_id"]))
+
+
+@app.route("/aluno/<int:aluno_id>/treino/copiar", methods=["POST"])
+def copiar_treino_outro_aluno(aluno_id):
+    get_aluno_or_404(aluno_id)
+    origem_aluno = intnum(request.form.get("aluno_origem"))
+    origem_treino = intnum(request.form.get("treino_origem"))
+    con = get_db()
+    t = con.execute(
+        "SELECT * FROM treinos WHERE id = ? AND aluno_id = ?", (origem_treino, origem_aluno)
+    ).fetchone()
+    if not t:
+        flash("Treino de origem não encontrado.", "error")
+        return redirect(url_for("treino", aluno_id=aluno_id))
+    cur = con.execute(
+        "INSERT INTO treinos (aluno_id, nome, dia_semana, notas, ordem) VALUES (?, ?, ?, ?, ?)",
+        (aluno_id, t["nome"], t["dia_semana"], t["notas"], 0),
+    )
+    novo_id = cur.lastrowid
+    for e in con.execute(
+        "SELECT * FROM exercicios WHERE treino_id = ? ORDER BY ordem, id", (origem_treino,)
+    ).fetchall():
+        con.execute(
+            """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem, rir, observacoes, metodo_progressao)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (novo_id, e["nome"], e["series"], e["repeticoes"], e["carga"], e["descanso"], e["grupo"],
+             e["ordem"], e["rir"], e["observacoes"], e["metodo_progressao"]),
+        )
+    con.commit()
+    flash("Treino copiado para este aluno (registros independentes).", "success")
+    return redirect(url_for("treino", aluno_id=aluno_id))
+
+
+@app.route("/aluno/<int:aluno_id>/treino/modelo", methods=["POST"])
+def novo_treino_modelo(aluno_id):
+    get_aluno_or_404(aluno_id)
+    modelo = request.form.get("modelo")
+    nome = request.form.get("nome", "").strip()
+    if modelo not in MODELOS_TREINO:
+        flash("Modelo inválido.", "error")
+        return redirect(url_for("treino", aluno_id=aluno_id))
+    con = get_db()
+    sugestao = montar_sugestao(
+        con, "Outro", modelo, "Intermediário", "60", [], "", [], rot=aluno_id,
+    )
+    treino_id = gravar_sugestao(
+        con, aluno_id, nome or f"Treino {MODELOS_TREINO[modelo]['label']}", "", "",
+        sugestao["itens"],
+    )
+    con.commit()
+    flash("Treino criado a partir do modelo.", "success")
+    return redirect(url_for("treino", aluno_id=aluno_id))
+
+
+@app.route("/aluno/<int:aluno_id>/assistente/sugestao", methods=["POST"])
+def assistente_sugestao(aluno_id):
+    get_aluno_or_404(aluno_id)
+    dados = request.get_json(silent=True) or {}
+    con = get_db()
+    res = montar_sugestao(
+        con,
+        dados.get("objetivo") or "Hipertrofia",
+        dados.get("divisao") or "fullbody",
+        dados.get("nivel") or "Intermediário",
+        dados.get("duracao") or "60",
+        dados.get("prioridades") or [],
+        dados.get("restricoes") or "",
+        dados.get("equipamentos") or [],
+        rot=intnum(dados.get("rot"), aluno_id) or aluno_id,
+    )
+    return {"itens": res["itens"], "avisos": res["avisos"]}
+
+
+@app.route("/aluno/<int:aluno_id>/assistente/salvar", methods=["POST"])
+def assistente_salvar(aluno_id):
+    get_aluno_or_404(aluno_id)
+    dados = request.get_json(silent=True) or {}
+    itens = dados.get("itens") or []
+    con = get_db()
+    mouse = gravar_sugestao(
+        con, aluno_id, dados.get("nome") or "Treino montado",
+        dados.get("dia_semana") or "", dados.get("notas") or "", itens,
+    )
+    con.commit()
+    flash("Treino montado pelo assistente criado com sucesso.", "success")
+    return {"ok": True, "treino_id": mouse}
 
 
 @app.route("/aluno/<int:aluno_id>/dieta")
@@ -2834,7 +3594,7 @@ def gerar_plano(aluno_id):
     template = montar_template(a)
     treinos = selecionar_exercicios(con, template)
     semana = semana_para_aluno(a, len(treinos))
-    lib = con.execute("SELECT * FROM exercicios_padrao ORDER BY grupo, nome").fetchall()
+    lib = [dict(r) for r in con.execute("SELECT * FROM exercicios_padrao ORDER BY grupo, nome").fetchall()]
     return render_template(
         "gerar.html", active="alunos", aba="gerar", aluno=a, c=c,
         refeicoes=refeicoes, treinos=treinos, lib=lib, rot=rot, semana=semana,
@@ -2978,11 +3738,12 @@ def aplicar_treino(aluno_id):
             "INSERT INTO treinos (aluno_id, nome, dia_semana, notas, ordem) VALUES (?, ?, ?, ?, ?)",
             (aluno_id, t["nome"], semana[i - 1] or "", "Gerado pelo assistente (low volume · foco masculinização).", i),
         )
-        for e in t["itens"]:
+        for j, e in enumerate(t["itens"], start=1):
             con.execute(
-                """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (cur.lastrowid, e["nome"], e["series"], e["repeticoes"], "", e["descanso"], e["grupo"], 0),
+                """INSERT INTO exercicios (treino_id, nome, series, repeticoes, carga, descanso, grupo, ordem, rir, observacoes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (cur.lastrowid, e["nome"], e["series"], e["repeticoes"], "", e["descanso"], e["grupo"], j,
+                 e["rir"], e["observacoes"]),
             )
     con.commit()
     flash("Treino gerado e aplicado ao aluno.", "success")
@@ -2997,18 +3758,58 @@ def novo_exercicio_padrao():
     if nome and grupo:
         con = get_db()
         con.execute(
-            """INSERT INTO exercicios_padrao (nome, grupo, grande, series, repeticoes, descanso)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO exercicios_padrao
+               (nome, grupo, grande, series, repeticoes, descanso, secundarios, padrao,
+                equipamento, nivel, rir, observacoes, ativo)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)""",
             (
                 nome, grupo,
                 1 if request.form.get("grande") else 0,
                 min(max(intnum(request.form.get("series", ""), 2) or 1, 1), 5),
                 request.form.get("repeticoes", "").strip() or "10-12",
                 request.form.get("descanso", "").strip() or "90s",
+                request.form.get("secundarios", "").strip(),
+                request.form.get("padrao", "").strip(),
+                request.form.get("equipamento", "").strip(),
+                request.form.get("nivel", "").strip(),
+                request.form.get("rir", "").strip() or "1-2",
+                request.form.get("observacoes", "").strip(),
             ),
         )
         con.commit()
         flash("Exercício adicionado à biblioteca.", "success")
+    return redirect(url_for("gerar_plano", aluno_id=aluno_id)) if aluno_id else redirect(url_for("alunos"))
+
+
+@app.route("/exercicio-padrao/<int:ex_id>/editar", methods=["POST"])
+def editar_exercicio_padrao(ex_id):
+    aluno_id = intnum(request.form.get("aluno_id"))
+    nome = request.form.get("nome", "").strip()
+    con = get_db()
+    if nome:
+        con.execute(
+            """UPDATE exercicios_padrao SET nome = ?, grupo = ?, grande = ?, series = ?, repeticoes = ?,
+               descanso = ?, secundarios = ?, padrao = ?, equipamento = ?, nivel = ?, rir = ?,
+               observacoes = ?, ativo = ? WHERE id = ?""",
+            (
+                nome,
+                request.form.get("grupo", "").strip(),
+                1 if request.form.get("grande") else 0,
+                min(max(intnum(request.form.get("series", ""), 2) or 1, 1), 5),
+                request.form.get("repeticoes", "").strip() or "10-12",
+                request.form.get("descanso", "").strip() or "90s",
+                request.form.get("secundarios", "").strip(),
+                request.form.get("padrao", "").strip(),
+                request.form.get("equipamento", "").strip(),
+                request.form.get("nivel", "").strip(),
+                request.form.get("rir", "").strip() or "1-2",
+                request.form.get("observacoes", "").strip(),
+                1 if request.form.get("ativo") else 0,
+                ex_id,
+            ),
+        )
+        con.commit()
+        flash("Exercício da biblioteca atualizado.", "success")
     return redirect(url_for("gerar_plano", aluno_id=aluno_id)) if aluno_id else redirect(url_for("alunos"))
 
 
