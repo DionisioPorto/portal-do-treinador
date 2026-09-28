@@ -1938,7 +1938,9 @@ def progresso(aluno_id):
     ultimo_peso = serie[-1]["peso"] if serie else None
     peso_atual = a["peso_atual"] or ultimo_peso
     altura = a["altura_cm"]
-    imc = round(peso_atual / ((altura / 100) ** 2), 2) if (peso_atual and altura) else None
+    imc = None
+    if peso_atual and altura and altura > 0:
+        imc = round(peso_atual / ((altura / 100) ** 2), 2)
     primeiro = serie[0]["peso"] if serie else None
     ultimo = ultimo_peso
     tendencia = tendencia_peso(a["objetivo_meta"] or "", primeiro, ultimo)
