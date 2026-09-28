@@ -182,6 +182,25 @@ CREATE TABLE IF NOT EXISTS leads (
     data TEXT DEFAULT (date('now','localtime')),
     criado_em TEXT DEFAULT (datetime('now','localtime'))
 );
+
+CREATE TABLE IF NOT EXISTS avaliacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    aluno_id INTEGER NOT NULL,
+    data TEXT DEFAULT (date('now','localtime')),
+    peso REAL,
+    percentual_gordura REAL,
+    peito REAL,
+    ombro REAL,
+    biceps REAL,
+    antebraco REAL,
+    cintura REAL,
+    abdomen REAL,
+    quadril REAL,
+    coxa REAL,
+    panturrilha REAL,
+    observacoes TEXT,
+    criado_em TEXT DEFAULT (datetime('now','localtime'))
+);
 """
 
 
@@ -398,6 +417,51 @@ def grafico_donut(items):
         })
         ang += frac
     return {"segs": segs, "total": total, "cx": CX, "cy": CY, "r": R, "ir": IR, "sw": R - IR}
+
+
+def _grafico_linha(serie, um=""):
+    """Mapa de uma série de valores para um gráfico de linha em SVG."""
+    if not serie:
+        return None
+    LAR, ALT, M = 640, 220, 40
+    vals = [s["valor"] for s in serie]
+    gmin, gmax = min(vals), max(vals)
+    if len(vals) == 1:
+        return {
+            "pontos": [{"x": round(LAR / 2, 1), "y": round(ALT / 2, 1), "valor": vals[0], "data": serie[0]["data"]}],
+            "min": round(gmin, 1), "max": round(gmax, 1), "w": LAR, "h": ALT, "m": M, "n": 1,
+            "yb": ALT - M, "um": um,
+        }
+    if gmax - gmin < 0.5:
+        gmin, gmax = gmin - 1, gmax + 1
+    span = gmax - gmin or 1.0
+    n = len(vals)
+    pontos = []
+    for i, s in enumerate(serie):
+        x = M + (i * (LAR - 2 * M) / (n - 1))
+        y = ALT - M - ((s["valor"] - gmin) / span) * (ALT - 2 * M)
+        pontos.append({"x": round(x, 1), "y": round(y, 1), "valor": s["valor"], "data": s["data"]})
+    yb = ALT - M
+    seg = ["%s,%s" % (p["x"], p["y"]) for p in pontos]
+    area = "M %s,%s L %s L %s,%s Z" % (pontos[0]["x"], yb, " L ".join(seg), pontos[-1]["x"], yb)
+    return {
+        "pontos": pontos, "min": round(gmin, 1), "max": round(gmax, 1),
+        "w": LAR, "h": ALT, "m": M, "n": n, "yb": yb, "um": um,
+        "line": " ".join(seg), "area": area,
+    }
+
+
+def grafico_evolucao(avaliacoes):
+    """Gera um gráfico de linha por medida (peso, % gordura, cintura, etc.)."""
+    sequencia = list(reversed(avaliacoes))
+    graficos = {}
+    for chave, nome, um in MEDIDAS_GRAFICO:
+        serie = [{"data": a["data"], "valor": a[chave]} for a in sequencia if a[chave]]
+        g = _grafico_linha(serie, um)
+        if g:
+            g["nome"] = nome
+            graficos[chave] = g
+    return graficos
 
 
 OBJETIVOS_META = {
@@ -695,6 +759,29 @@ CATEGORIAS = [
 ]
 
 STATUS_LEADS = ("novo", "em contato", "proposta", "convertido", "perdido")
+
+MEDIDAS = [
+    ("peso", "Peso (kg)"),
+    ("percentual_gordura", "% Gordura"),
+    ("peito", "Peito (cm)"),
+    ("ombro", "Ombro (cm)"),
+    ("biceps", "Bíceps (cm)"),
+    ("antebraco", "Antebraço (cm)"),
+    ("cintura", "Cintura (cm)"),
+    ("abdomen", "Abdômen (cm)"),
+    ("quadril", "Quadril (cm)"),
+    ("coxa", "Coxa (cm)"),
+    ("panturrilha", "Panturrilha (cm)"),
+]
+
+MEDIDAS_GRAFICO = [
+    ("peso", "Peso", "kg"),
+    ("percentual_gordura", "% gordura", "%"),
+    ("biceps", "Bíceps", "cm"),
+    ("cintura", "Cintura", "cm"),
+    ("quadril", "Quadril", "cm"),
+    ("coxa", "Coxa", "cm"),
+]
 
 LEAD_ORIGENS = ["Instagram", "Indicação", "WhatsApp", "Google", "Rua/Redes", "Outro"]
 
@@ -1213,6 +1300,8 @@ def inject_helpers():
         STATUS_LEADS=STATUS_LEADS,
         LEAD_ORIGENS=LEAD_ORIGENS,
         DESPESA_CATEGORIAS=DESPESA_CATEGORIAS,
+        MEDIDAS=MEDIDAS,
+        MEDIDAS_GRAFICO=MEDIDAS_GRAFICO,
         hoje=datetime.date.today().isoformat(),
     )
 
@@ -1924,6 +2013,75 @@ def excluir_checkin(checkin_id):
         con.commit()
         flash("Check-in excluído.", "info")
         return redirect(url_for("acompanhamento", aluno_id=r["aluno_id"]))
+    return redirect(url_for("alunos"))
+
+
+@app.route("/aluno/<int:aluno_id>/avaliacao")
+def avaliacao(aluno_id):
+    a = get_aluno_or_404(aluno_id)
+    con = get_db()
+    avaliacoes = con.execute(
+        "SELECT * FROM avaliacoes WHERE aluno_id = ? ORDER BY data DESC, id DESC", (aluno_id,)
+    ).fetchall()
+    graficos = grafico_evolucao(avaliacoes)
+    imc_atual = None
+    altura = a["altura_cm"]
+    if avaliacoes and avaliacoes[0]["peso"] and altura and altura > 0:
+        imc_atual = round(avaliacoes[0]["peso"] / ((altura / 100) ** 2), 2)
+    ultima = avaliacoes[0] if avaliacoes else None
+    anterior = avaliacoes[1] if len(avaliacoes) > 1 else None
+    return render_template(
+        "avaliacao.html", active="alunos", aba="avaliacao", aluno=a,
+        avaliacoes=avaliacoes, graficos=graficos, imc_atual=imc_atual,
+        ultima=ultima, anterior=anterior,
+    )
+
+
+@app.route("/aluno/<int:aluno_id>/avaliacao/novo", methods=["POST"])
+def nova_avaliacao(aluno_id):
+    get_aluno_or_404(aluno_id)
+    data = request.form.get("data", "").strip() or datetime.date.today().isoformat()
+    con = get_db()
+    cols = [k for k, _ in MEDIDAS]
+    vals = [num(request.form.get(k, "")) for k, _ in MEDIDAS]
+    con.execute(
+        "INSERT INTO avaliacoes (aluno_id, data, %s, observacoes) VALUES (?, ?, %s, ?)"
+        % (", ".join(cols), ", ".join("?" * len(cols))),
+        (aluno_id, data, *vals, request.form.get("observacoes", "").strip()),
+    )
+    con.commit()
+    flash("Avaliação registrada.", "success")
+    return redirect(url_for("avaliacao", aluno_id=aluno_id))
+
+
+@app.route("/avaliacao/<int:avaliacao_id>/editar", methods=["POST"])
+def editar_avaliacao(avaliacao_id):
+    con = get_db()
+    r = con.execute("SELECT aluno_id FROM avaliacoes WHERE id = ?", (avaliacao_id,)).fetchone()
+    if r:
+        data = request.form.get("data", "").strip()
+        cols = [k for k, _ in MEDIDAS]
+        vals = [num(request.form.get(k, "")) for k, _ in MEDIDAS]
+        con.execute(
+            "UPDATE avaliacoes SET data = ?, %s, observacoes = ? WHERE id = ?"
+            % (", ".join(["%s = ?" % c for c in cols])),
+            (data, *vals, request.form.get("observacoes", "").strip(), avaliacao_id),
+        )
+        con.commit()
+        flash("Avaliação atualizada.", "success")
+        return redirect(url_for("avaliacao", aluno_id=r["aluno_id"]))
+    return redirect(url_for("alunos"))
+
+
+@app.route("/avaliacao/<int:avaliacao_id>/excluir", methods=["POST"])
+def excluir_avaliacao(avaliacao_id):
+    con = get_db()
+    r = con.execute("SELECT aluno_id FROM avaliacoes WHERE id = ?", (avaliacao_id,)).fetchone()
+    if r:
+        con.execute("DELETE FROM avaliacoes WHERE id = ?", (avaliacao_id,))
+        con.commit()
+        flash("Avaliação excluída.", "info")
+        return redirect(url_for("avaliacao", aluno_id=r["aluno_id"]))
     return redirect(url_for("alunos"))
 
 

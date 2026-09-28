@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}{{ aluno['nome'] }} · Avaliação física · Portal{% endblock %}
+{% block content %}
+{% include "_aluno_cabecalho.html" %}
+
+<div class="page-head">
+  <div>
+    <h2 style="font-size:19px;">Avaliação física</h2>
+    <div class="muted small">Medidas corporais, % de gordura e evolução</div>
+  </div>
+  <div class="head-actions">
+    <button class="btn primary" onclick="abrirAvaliacao()">
+      <svg class="icon"><use href="#i-plus"/></svg>Nova avaliação
+    </button>
+  </div>
+</div>
+
+{% if ultima %}
+{% set delta_peso = (ultima['peso'] - (anterior['peso'] if anterior and anterior['peso'] else ultima['peso'])) if ultima['peso'] else none %}
+{% set delta_bf = (ultima['percentual_gordura'] - (anterior['percentual_gordura'] if anterior and anterior['percentual_gordura'] else ultima['percentual_gordura'])) if ultima['percentual_gordura'] else none %}
+<div class="cards-grid">
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-ruler"/></svg></div>
+    <div class="stat-label">IMC atual</div>
+    <div class="stat-value">{{ imc_atual if imc_atual is not none else '—' }}</div>
+    <div class="stat-sub">
+      {% if imc_atual %}
+        {% if imc_atual < 18.5 %}Abaixo do peso{% elif imc_atual < 25 %}Peso adequado{% elif imc_atual < 30 %}Sobrepeso{% else %}Obesidade{% endif %}
+      {% else %}informe peso e altura{% endif %}
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon green"><svg class="icon"><use href="#i-flame"/></svg></div>
+    <div class="stat-label">% Gordura</div>
+    <div class="stat-value">{{ ultima['percentual_gordura'] if ultima['percentual_gordura'] is not none else '—' }}</div>
+    <div class="stat-sub">
+      {% if delta_bf is not none %}
+      <span class="{{ 'green' if delta_bf < 0 else 'red' }}">{{ '%+g'|format(delta_bf) }}% vs avaliação anterior</span>
+      {% else %}última avaliação{% endif %}
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon amber"><svg class="icon"><use href="#i-weight"/></svg></div>
+    <div class="stat-label">Peso atual</div>
+    <div class="stat-value">{{ ultima['peso'] if ultima['peso'] is not none else '—' }}</div>
+    <div class="stat-sub">
+      {% if delta_peso is not none %}
+      <span class="{{ 'red' if aluno['objetivo_meta'] == 'ganhar' and delta_peso < 0 else ('green' if delta_peso < 0 else 'red') }}">{{ '%+g'|format(delta_peso) }} kg vs anterior</span>
+      {% else %}última avaliação{% endif %}
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-icon"><svg class="icon"><use href="#i-activity"/></svg></div>
+    <div class="stat-label">Cintura</div>
+    <div class="stat-value">{{ ultima['cintura'] if ultima['cintura'] is not none else '—' }}</div>
+    <div class="stat-sub">última avaliação</div>
+  </div>
+</div>
+{% endif %}
+
+{% if not ultima and not graficos %}
+<div class="card empty-state" style="margin-bottom:18px;">
+  <div class="empty-ico"><svg class="icon"><use href="#i-ruler"/></svg></div>
+  <h3>Nenhuma avaliação ainda</h3>
+  <p>Registre medidas, % de gordura e peso para acompanhar a evolução do aluno.</p>
+  <button class="btn primary" onclick="abrirAvaliacao()">
+    <svg class="icon"><use href="#i-plus"/></svg>Nova avaliação
+  </button>
+</div>
+{% endif %}
+
+{% if graficos %}
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-trending"/></svg>Evolução</h3>
+    <select id="metric-sel" class="select-sm metric-sel" onchange="trocarMetrica()">
+      {% for chave, g in graficos.items() %}
+      <option value="{{ chave }}" {{ 'selected' if chave == 'peso' else '' }}>{{ g['nome'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="chart-wrap">
+    {% for chave, g in graficos.items() %}
+    <div class="grf-item" id="grf-{{ chave }}" {{ 'hidden' if chave != 'peso' else '' }}>
+      <svg viewBox="0 0 {{ g['w'] }} {{ g['h'] }}" role="img" aria-label="Evolução {{ g['nome'] }}">
+        <line class="g-stroke" x1="{{ g['m'] }}" y1="{{ g['yb'] }}" x2="{{ g['w'] - g['m'] }}" y2="{{ g['yb'] }}"></line>
+        <text class="g-label" x="{{ g['m'] - 6 }}" y="{{ g['yb'] + 4 }}" text-anchor="end">{{ g['min'] }}</text>
+        <text class="g-label" x="{{ g['m'] - 6 }}" y="{{ g['m'] + 4 }}" text-anchor="end">{{ g['max'] }}</text>
+        {% if g['n'] > 1 %}
+        <polygon class="g-area" points="{{ g['area'] }}"></polygon>
+        <polyline class="g-line" points="{{ g['line'] }}"></polyline>
+        <text class="g-label" x="{{ g['pontos'][0]['x'] }}" y="{{ g['h'] - 8 }}" text-anchor="{{ 'end' if g['n'] == 1 else 'start' }}">{{ formatar_data(g['pontos'][0]['data']) }}</text>
+        {% if g['n'] > 1 %}
+        <text class="g-label" x="{{ g['pontos'][-1]['x'] }}" y="{{ g['h'] - 8 }}" text-anchor="end">{{ formatar_data(g['pontos'][-1]['data']) }}</text>
+        {% endif %}
+        {% endif %}
+        {% for p in g['pontos'] %}
+        <circle class="g-dot" cx="{{ p['x'] }}" cy="{{ p['y'] }}" r="4"></circle>
+        <title>{{ formatar_data(p['data']) }} · {{ p['valor'] }} {{ g['um'] }}</title>
+        {% endfor %}
+      </svg>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if avaliacoes %}
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-ruler"/></svg>Histórico de avaliações</h3>
+  </div>
+  <div class="table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th class="num">Peso</th>
+          <th class="num">% Gordura</th>
+          <th class="num">Peito</th>
+          <th class="num">Cintura</th>
+          <th class="num">Quadril</th>
+          <th class="num">Bíceps</th>
+          <th class="num">Coxa</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for av in avaliacoes %}
+        <tr>
+          <td class="strong">{{ formatar_data(av['data']) }}</td>
+          <td class="num">{{ av['peso'] if av['peso'] is not none else '—' }}</td>
+          <td class="num">{{ av['percentual_gordura'] if av['percentual_gordura'] is not none else '—' }}</td>
+          <td class="num">{{ av['peito'] if av['peito'] is not none else '—' }}</td>
+          <td class="num">{{ av['cintura'] if av['cintura'] is not none else '—' }}</td>
+          <td class="num">{{ av['quadril'] if av['quadril'] is not none else '—' }}</td>
+          <td class="num">{{ av['biceps'] if av['biceps'] is not none else '—' }}</td>
+          <td class="num">{{ av['coxa'] if av['coxa'] is not none else '—' }}</td>
+          <td class="actions-cell">
+            <button type="button" class="btn ghost small" onclick="abrirAvaliacao(this)"
+                    data-url="{{ url_for('editar_avaliacao', avaliacao_id=av['id']) }}"
+                    data-data="{{ av['data'] }}"
+                    {% for c, _ in MEDIDAS %}data-{{ c }}="{{ av[c] or '' }}"{% endfor %}
+                    data-observacoes="{{ av['observacoes'] or '' }}">
+              <svg class="icon"><use href="#i-pencil"/></svg>
+            </button>
+            <form method="post" action="{{ url_for('excluir_avaliacao', avaliacao_id=av['id']) }}" class="inline" data-confirm="Excluir esta avaliação?">
+              <button type="submit" class="btn ghost danger small">
+                <svg class="icon"><use href="#i-trash"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<dialog id="form-avaliacao" class="modal">
+  <form method="post" action="{{ url_for('nova_avaliacao', aluno_id=aluno['id']) }}" id="form-avaliacao-form">
+    <div class="modal-head">
+      <h2 id="form-avaliacao-titulo">Nova avaliação</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-avaliacao').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="field"><label>Data</label><input type="date" name="data" id="av-data"></div>
+    <div class="field-row">
+      <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" name="peso" id="av-peso" placeholder="72.5"></div>
+      <div class="field"><label>% Gordura</label><input type="number" step="0.1" name="percentual_gordura" id="av-percentual_gordura" placeholder="18.5"></div>
+    </div>
+    <div class="field-row av-4">
+      <div class="field"><label>Peito (cm)</label><input type="number" step="0.1" name="peito" id="av-peito" placeholder="100"></div>
+      <div class="field"><label>Ombro (cm)</label><input type="number" step="0.1" name="ombro" id="av-ombro"></div>
+      <div class="field"><label>Bíceps (cm)</label><input type="number" step="0.1" name="biceps" id="av-biceps"></div>
+      <div class="field"><label>Antebraço (cm)</label><input type="number" step="0.1" name="antebraco" id="av-antebraco"></div>
+    </div>
+    <div class="field-row av-4">
+      <div class="field"><label>Cintura (cm)</label><input type="number" step="0.1" name="cintura" id="av-cintura"></div>
+      <div class="field"><label>Abdômen (cm)</label><input type="number" step="0.1" name="abdomen" id="av-abdomen"></div>
+      <div class="field"><label>Quadril (cm)</label><input type="number" step="0.1" name="quadril" id="av-quadril"></div>
+      <div class="field"><label>Coxa (cm)</label><input type="number" step="0.1" name="coxa" id="av-coxa"></div>
+    </div>
+    <div class="field-row av-4">
+      <div class="field"><label>Panturrilha (cm)</label><input type="number" step="0.1" name="panturrilha" id="av-panturrilha"></div>
+    </div>
+    <div class="field"><label>Observações</label><textarea name="observacoes" id="av-observacoes" rows="2" placeholder="Evolução, metas, próximos passos"></textarea></div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-avaliacao').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar avaliação
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const form = document.getElementById('form-avaliacao-form');
+  const conf = {};
+
+  window.abrirAvaliacao = function (btn) {
+    const t = document.getElementById('form-avaliacao-titulo');
+    const data = document.getElementById('av-data');
+    document.querySelectorAll('#form-avaliacao input, #form-avaliacao textarea').forEach(function (el) {
+      el.value = '';
+    });
+    if (btn) {
+      form.action = btn.dataset.url;
+      t.textContent = 'Editar avaliação';
+      data.value = btn.dataset.data;
+      document.getElementById('av-observacoes').value = btn.dataset.observacoes || '';
+      {% for c, _ in MEDIDAS %}
+      var el{{ loop.index }} = document.getElementById('av-{{ c }}');
+      if (el{{ loop.index }}) el{{ loop.index }}.value = btn.dataset.{{ c }} || '';
+      {% endfor %}
+    } else {
+      form.action = "{{ url_for('nova_avaliacao', aluno_id=aluno['id']) }}";
+      t.textContent = 'Nova avaliação';
+      data.value = "{{ hoje }}";
+    }
+    document.getElementById('form-avaliacao').showModal();
+  };
+
+  window.trocarMetrica = function () {
+    const sel = document.getElementById('metric-sel');
+    document.querySelectorAll('.grf-item').forEach(function (el) {
+      el.hidden = el.id !== 'grf-' + sel.value;
+    });
+  };
+})();
+</script>
+{% endblock %}

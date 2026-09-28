@@ -1091,3 +1091,10 @@ input[type="file"] {
 .donut-legend .legend-item { justify-content: space-between; }
 .legend-name { color: var(--text); }
 .legend-value { color: var(--muted-2); font-size: 12.5px; }
+
+/* ---- Avaliação física ---- */
+.metric-sel { font-size: 12.5px; padding: 5px 10px; }
+.av-4 .field { flex: 1 1 130px; }
+.grf-item { display: block; }
+.grf-item[hidden] { display: none; }
+.grf-item svg { display: block; width: 100%; min-width: 480px; max-width: 680px; height: auto; }
