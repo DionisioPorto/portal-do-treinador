@@ -1346,8 +1346,8 @@ DISTRIBUICAO_REFEICOES = {
     "Jantar":          (0.25, 0.26, 0.27, 0.24),
 }
 
-# Estrutura da montagem automática por refeição: cada item é uma "função" da refeição
-# com uma lista de alimentos candidatos. Escolhemos 1 de cada (rotação por aluno).
+# Estrutura da montagem automática por refeição: cada item é uma função com
+# candidatos equivalentes; vegetais ficam juntos para evitar duplicidade no prato.
 MONTAGEM_REFEICOES = {
     "Café da manhã": [
         ("proteína", ["Iogurte natural", "Iogurte grego", "Queijo cottage", "Ovo cozido"]),
@@ -1363,8 +1363,7 @@ MONTAGEM_REFEICOES = {
         ("amido", ["Arroz branco cozido", "Arroz integral cozido", "Macarrão cozido", "Batata inglesa cozida"]),
         ("leguminosa", ["Feijão preto", "Feijão carioca", "Lentilha", "Grão-de-bico"]),
         ("proteína", ["Peito de frango grelhado", "Filé de tilápia", "Bife magro (alcatra)", "Carne moída magra", "Filé mignon", "Lagarto cozido"]),
-        ("folha", ["Alface", "Rúcula", "Espinafre"]),
-        ("legume", ["Tomate", "Cenoura", "Brócolis", "Abobrinha"]),
+        ("vegetais", ["Alface", "Rúcula", "Espinafre", "Tomate", "Cenoura", "Brócolis", "Abobrinha"]),
     ],
     "Lanche da tarde": [
         ("carboidrato", ["Pão integral", "Pão francês", "Tapioca", "Torrada integral"]),
@@ -1375,8 +1374,7 @@ MONTAGEM_REFEICOES = {
     "Jantar": [
         ("amido", ["Batata-doce cozida", "Arroz branco cozido", "Batata inglesa cozida", "Mandioca cozida"]),
         ("proteína", ["Filé de tilápia", "Peito de frango grelhado", "Filé de merluza", "Salmão grelhado", "Ovo cozido"]),
-        ("folha", ["Brócolis", "Espinafre", "Couve"]),
-        ("legume", ["Cenoura", "Abobrinha", "Chuchu", "Vagem"]),
+        ("vegetais", ["Brócolis", "Espinafre", "Couve", "Cenoura", "Abobrinha", "Chuchu", "Vagem"]),
         ("gordura", ["Azeite de oliva"]),
     ],
 }
@@ -4007,7 +4005,7 @@ def aplicar_dieta(aluno_id):
         (
             aluno_id,
             round(c["meta_kcal"]), round(c["proteina"]), round(c["carbo"]), round(c["gordura"]),
-            f"Meta calculada pelo assistente (Harris-Benedict, {OBJETIVOS_META.get(c['objetivo'], c['objetivo']).lower()}, ajuste {c['ajuste']:+.0f}%). Preencha os alimentos de cada refeição.",
+            "",
         ),
     )
     rot = analisar_rotina(a["rotina"] or "")

@@ -59,7 +59,7 @@
         <span class="chip">Carboidratos: <strong>{{ metas['carbs'] }} g</strong></span>
         <span class="chip">Gorduras: <strong>{{ metas['gorduras'] }} g</strong></span>
       </div>
-      {% if metas['observacoes'] %}<p class="muted small">{{ metas['observacoes'] }}</p>{% endif %}
+      {% if metas['observacoes'] and not metas['observacoes'].startswith('Meta calculada pelo assistente') %}<p class="muted small">{{ metas['observacoes'] }}</p>{% endif %}
     </section>
     {% endif %}
 

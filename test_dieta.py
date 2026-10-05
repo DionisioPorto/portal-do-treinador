@@ -84,25 +84,31 @@ def test_geracao_diaria_meta_1912_sem_porcoes_irreais():
         assert plano and len(plano["refeicoes"]) == 5
         totais_banco = {"kcal": 0.0, "proteinas": 0.0, "carbs": 0.0, "gorduras": 0.0}
         estrutura_esperada = {
-            "Café da manhã": ({"proteina", "laticinio"}, {"amido", "pao", "cereal"}, {"fruta"}),
-            "Lanche da manhã": ({"proteina", "laticinio"}, {"fruta"}, {"gordura"}),
+            "Café da manhã": (
+                {"proteina", "laticinio"}, {"amido", "pao", "cereal"}, {"fruta"},
+            ),
+            "Lanche da manhã": ({"proteina", "laticinio"}, {"fruta"}),
             "Almoço": (
-                {"amido", "pao", "cereal"}, {"leguminosa"}, {"proteina"},
-                {"verdura_folha"}, {"legume", "verdura_folha"},
+                {"amido", "pao", "cereal"}, {"proteina"}, {"legume", "verdura_folha"},
             ),
             "Lanche da tarde": (
-                {"amido", "pao", "cereal"}, {"proteina", "laticinio"}, {"fruta"}, {"gordura"},
+                {"amido", "pao", "cereal"}, {"proteina", "laticinio"},
             ),
             "Jantar": (
-                {"amido", "pao", "cereal"}, {"proteina"}, {"verdura_folha"},
-                {"legume", "verdura_folha"}, {"gordura"},
+                {"amido", "pao", "cereal"}, {"proteina"}, {"legume", "verdura_folha"},
             ),
         }
         for refeicao in plano["refeicoes"]:
             itens = refeicao["alimentos"]
             assert itens, f"{refeicao['nome']} não pode ficar vazia"
+            assert 2 <= len(itens) <= 4
             grupos = {item["grupo"] for item in itens}
             assert all(grupos.intersection(papel) for papel in estrutura_esperada[refeicao["nome"]])
+            assert sum(
+                item["grupo"] in {"legume", "verdura_folha"} for item in itens
+            ) <= 1
+            if refeicao["nome"] == "Almoço":
+                assert sum(item["grupo"] == "leguminosa" for item in itens) <= 1
             totais_refeicao_banco = {
                 "kcal": 0.0, "proteinas": 0.0, "carbs": 0.0, "gorduras": 0.0,
             }
@@ -187,6 +193,11 @@ def test_geracao_rick_escolhe_combinacao_e_equilibra_proteina():
         totais_banco = {"kcal": 0.0, "proteinas": 0.0, "carbs": 0.0, "gorduras": 0.0}
         proteina_por_refeicao = []
         for refeicao in plano["refeicoes"]:
+            assert 2 <= len(refeicao["alimentos"]) <= 4
+            assert sum(
+                item["grupo"] in {"legume", "verdura_folha"}
+                for item in refeicao["alimentos"]
+            ) <= 1
             proteina_refeicao = 0.0
             for item in refeicao["alimentos"]:
                 if refeicao["nome"] in {"Café da manhã", "Lanche da manhã", "Lanche da tarde"}:
@@ -214,6 +225,35 @@ def test_geracao_rick_escolhe_combinacao_e_equilibra_proteina():
         assert abs(totais_banco["carbs"] - 218) <= TOLERANCIAS_DIETA["carbo"]
         assert abs(totais_banco["gorduras"] - 55) <= TOLERANCIAS_DIETA["gordura"]
         assert max(proteina_por_refeicao) - min(proteina_por_refeicao) < 40
+
+
+def test_pdf_dieta_oculta_observacao_automatica_e_preserva_personalizada():
+    """PDF esconde a antiga nota automática e mantém observações próprias."""
+    from flask import render_template
+
+    dados = {
+        "aluno": {"nome": "Rick", "objetivo": "", "plano": ""},
+        "avisos": [],
+        "reais": {},
+        "alvo": {},
+        "metas": {
+            "kcal_diaria": 1909,
+            "proteinas": 140,
+            "carbs": 218,
+            "gorduras": 53,
+            "observacoes": "Meta calculada pelo assistente (Harris-Benedict).",
+        },
+        "refeicoes": [],
+        "alim": {},
+        "totais": {"calorias": 0, "proteinas": 0, "carbs": 0, "gorduras": 0},
+    }
+    with app.test_request_context("/"):
+        html = render_template("imprimir_dieta.html", **dados)
+        assert "Meta calculada pelo assistente" not in html
+
+        dados["metas"]["observacoes"] = "Observação nutricional personalizada."
+        html = render_template("imprimir_dieta.html", **dados)
+        assert "Observação nutricional personalizada." in html
 
 
 # =============================================================================

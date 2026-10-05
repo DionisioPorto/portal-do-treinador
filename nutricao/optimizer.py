@@ -36,6 +36,7 @@ GRUPOS_POR_PAPEL = {
     "leguminosa": {"leguminosa"},
     "folha": {"verdura_folha"},
     "legume": {"legume", "verdura_folha"},
+    "vegetais": {"legume", "verdura_folha"},
     "gordura": {"gordura"},
 }
 
@@ -46,7 +47,7 @@ PROTEINAS_CARNE_PEIXE = {
     "frango", "carne", "tilapia", "merluza", "salmao", "atum", "peixe",
     "alcatra", "lagarto", "sobrecoxa", "peru",
 }
-PESOS_MACROS = {"proteinas": 3.0, "kcal": 2.5, "carbs": 1.5, "gorduras": 1.5}
+PESOS_MACROS = {"proteinas": 3.0, "kcal": 6.0, "carbs": 1.5, "gorduras": 1.5}
 DISTRIBUICAO_PROTEINA_REFEICOES = {
     "Café da manhã": 0.20,
     "Lanche da manhã": 0.10,
@@ -226,13 +227,29 @@ class DietPlanOptimizer:
                         str(candidato.get("nome") or "").casefold(),
                     )
                 )
-                opcoes.append((papel, self._deduplicar_alimentos(pool)))
+                deduplicados = self._deduplicar_alimentos(pool)
+                for candidato in deduplicados:
+                    candidato["_opcional"] = self._slot_opcional(nome_refeicao, papel)
+                opcoes.append((papel, deduplicados))
             return [(papel, pool) for papel, pool in opcoes if pool]
 
         return [
             (normalizar_grupo(item.get("grupo_equiv") or item.get("grupo") or item.get("categoria")), [item])
             for item in self._candidatos_para_refeicao(nome_refeicao)
         ]
+
+    def _slot_opcional(self, nome_refeicao: str, papel: str) -> bool:
+        refeicao = self._sem_acentos(nome_refeicao)
+        papel = normalizar_grupo(papel)
+        if refeicao == "almoco":
+            return papel == "leguminosa"
+        if refeicao in {"lanche da manha", "lanche da tarde"}:
+            if papel == "gordura":
+                return True
+            return refeicao == "lanche da tarde" and papel == "fruta"
+        if refeicao == "jantar":
+            return papel == "gordura"
+        return False
 
     @staticmethod
     def _sem_acentos(texto: object) -> str:
@@ -339,6 +356,7 @@ class DietPlanOptimizer:
             "_slot": papel,
             "_preferido": bool(alimento.get("_preferido", True)),
             "_adequacao": self._pontuar_adequacao(nome_refeicao, papel, alimento),
+            "_opcional": bool(alimento.get("_opcional", False)),
         }
 
     def _buscar_por_nome(self, nome: str) -> list[dict]:
@@ -519,6 +537,21 @@ class DietPlanOptimizer:
             self._otimizar_porcoes(refeicoes, alvo)
             if not houve_melhoria:
                 break
+        for refeicao in refeicoes:
+            itens = refeicao.get("alimentos", [])
+            for indice, item in enumerate(list(itens)):
+                if not item.get("_opcional"):
+                    continue
+                perda_com_item = self._loss(refeicoes, alvo)
+                quantidade_original = item["quantidade"]
+                itens.remove(item)
+                self._recalcular_totais_refeicoes(refeicoes)
+                self._otimizar_porcoes(refeicoes, alvo)
+                if self._loss(refeicoes, alvo) >= perda_com_item:
+                    itens.insert(indice, item)
+                    item["quantidade"] = quantidade_original
+                    self._recalcular_totais_refeicoes(refeicoes)
+                    self._otimizar_porcoes(refeicoes, alvo)
 
     def generate(self) -> dict:
         nomes = self._lista_de_refeicoes()
@@ -561,6 +594,7 @@ class DietPlanOptimizer:
                 item.pop("_slot", None)
                 item.pop("_preferido", None)
                 item.pop("_adequacao", None)
+                item.pop("_opcional", None)
         return {"refeicoes": refeicoes, "totais": totais, "score": round(score, 2), "avisos": avisos, "status": status}
 
     def optimize(self):
