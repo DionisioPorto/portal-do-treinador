@@ -6,6 +6,8 @@ from pathlib import Path
 
 from flask import Flask, g, render_template, request, redirect, url_for, abort, flash, send_from_directory, session
 
+from nutricao.optimizer import DietPlanOptimizer
+
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(
     os.environ.get("PORTAL_DATA_DIR")
@@ -2936,6 +2938,53 @@ def _alimentos_info(con, ids):
     return con.execute(f"SELECT * FROM alimentos WHERE id IN ({ph})", ids).fetchall()
 
 
+def _gerar_pares_otimizados(con, pares, macros, nome_refeicao=None):
+    """Calcula quantidades reais usando o novo motor de otimização quando há metas."""
+    if not pares:
+        return []
+    kcal_t, p_t, c_t, g_t = (float(m) if m is not None else 0.0 for m in macros)
+    if not (kcal_t or p_t or c_t or g_t):
+        return _pares_padrao(con, pares)
+
+    ids = [int(a) for a, _ in pares]
+    itens = _alimentos_info(con, ids)
+    if not itens:
+        return _pares_padrao(con, pares)
+
+    estrutura = {nome_refeicao or "Refeição": [it["nome"] for it in itens if it.get("nome")]}
+    optimizer = DietPlanOptimizer(
+        meta_calorica_diaria=kcal_t,
+        proteina_diaria=p_t,
+        carboidrato_diario=c_t,
+        gordura_diaria=g_t,
+        quantidade_refeicoes=1,
+        estrutura_refeicoes=estrutura,
+        alimentos_disponiveis=[dict(it) for it in itens],
+        alimentos_ativos=[dict(it) for it in itens],
+        dados_nutricionais=[dict(it) for it in itens],
+    )
+    plan = optimizer.generate()
+    meal = plan.get("refeicoes", [{}])[0]
+    itens_plan = meal.get("alimentos", []) if isinstance(meal, dict) else []
+    if not itens_plan:
+        return _resolver_qtds(con, itens, kcal_t, p_t, c_t, g_t)
+
+    mapa_nome = {str(it["nome"]).strip().lower(): it for it in itens}
+    saida = []
+    for item in itens_plan:
+        nome = str(item.get("nome") or "").strip().lower()
+        alimento = mapa_nome.get(nome)
+        if not alimento:
+            continue
+        qtd = float(item.get("quantidade") or item.get("qtd") or 0.0)
+        if qtd <= 0:
+            continue
+        saida.append((int(alimento["id"]), max(0, round(float(qtd), 1))))
+    if saida:
+        return saida
+    return _resolver_qtds(con, itens, kcal_t, p_t, c_t, g_t)
+
+
 def _pares_formulario():
     """Lê alimentos + gramas enviados do formulário de refeição."""
     qtd_map = {}
@@ -2966,8 +3015,37 @@ def _pares_automaticos(con, pares, macros):
         return pares
     if not (kcal_t or p_t or c_t or g_t):
         return _pares_padrao(con, pares)
+    # Primeiro tenta o motor novo para respeitar porções e qualidade.
+    otimizados = _gerar_pares_otimizados(con, pares, macros)
+    if otimizados:
+        return otimizados
     itens = _alimentos_info(con, [a for a, _ in pares])
     return _resolver_qtds(con, itens, kcal_t, p_t, c_t, g_t)
+
+
+def _gerar_dieta_automaticamente(con, aluno_id, c):
+    """Gera uma dieta diária coerente usando o motor novo e preserva as metas do app."""
+    estrutura = {}
+    alimentos = con.execute("SELECT * FROM alimentos WHERE ativo = 1").fetchall()
+    for nome, _, _ in REFEICOES_MODELO:
+        selecionados = _selecionar_alimentos(con, nome, aluno_id)
+        if selecionados:
+            estrutura[nome] = selecionados
+    if not estrutura:
+        return None
+
+    optimizer = DietPlanOptimizer(
+        meta_calorica_diaria=float(c["meta_kcal"] or 0.0),
+        proteina_diaria=float(c["proteina"] or 0.0),
+        carboidrato_diario=float(c["carbo"] or 0.0),
+        gordura_diaria=float(c["gordura"] or 0.0),
+        quantidade_refeicoes=len(REFEICOES_MODELO),
+        estrutura_refeicoes=estrutura,
+        alimentos_disponiveis=[dict(a) for a in alimentos],
+        alimentos_ativos=[dict(a) for a in alimentos],
+        dados_nutricionais=[dict(a) for a in alimentos],
+    )
+    return optimizer.generate()
 
 
 @app.route("/aluno/<int:aluno_id>/refeicao/novo", methods=["POST"])
@@ -3975,25 +4053,70 @@ def aplicar_dieta(aluno_id):
             ),
         )
     con.commit()
-    # monta cada refeição com seleção estruturada (variedade por aluno), gramas calculadas
     refs = con.execute(
         "SELECT * FROM refeicoes WHERE aluno_id = ? ORDER BY ordem, id", (aluno_id,)
     ).fetchall()
-    for r in refs:
-        nomes = _selecionar_alimentos(con, r["nome"], aluno_id)
-        ids = []
-        for pn in nomes:
-            row = con.execute(
-                "SELECT id FROM alimentos WHERE nome = ? ORDER BY id LIMIT 1", (pn,)
-            ).fetchone()
-            if row:
-                ids.append(row["id"])
-        pares = _pares_automaticos(
-            con,
-            [(aid, 0) for aid in ids],
-            (r["calorias"] or 0, r["proteinas"] or 0, r["carbs"] or 0, r["gorduras"] or 0),
-        )
-        gravar_alimentos(con, r["id"], pares)
+    dieta_gerada = _gerar_dieta_automaticamente(con, aluno_id, c)
+
+    if dieta_gerada and dieta_gerada.get("refeicoes"):
+        por_nome = {r["nome"]: r for r in refs}
+        for refeicao in dieta_gerada["refeicoes"]:
+            r = por_nome.get(refeicao.get("nome"))
+            if not r:
+                continue
+            totais = refeicao.get("totais", {})
+            con.execute(
+                "UPDATE refeicoes SET calorias = ?, proteinas = ?, carbs = ?, gorduras = ? WHERE id = ?",
+                (
+                    round(float(totais.get("kcal", 0.0) or 0.0)),
+                    round(float(totais.get("proteinas", 0.0) or 0.0)),
+                    round(float(totais.get("carbs", 0.0) or 0.0)),
+                    round(float(totais.get("gorduras", 0.0) or 0.0)),
+                    r["id"],
+                ),
+            )
+            pares = []
+            mapa_nome = {str(it["nome"]).strip().lower(): it for it in con.execute("SELECT * FROM alimentos WHERE ativo = 1").fetchall()}
+            for item in refeicao.get("alimentos", []):
+                nome = str(item.get("nome") or "").strip().lower()
+                alimento = mapa_nome.get(nome)
+                if not alimento:
+                    continue
+                qtd = float(item.get("quantidade") or item.get("qtd") or 0.0)
+                if qtd <= 0:
+                    continue
+                pares.append((int(alimento["id"]), max(0, round(float(qtd), 1))))
+            if not pares:
+                nomes = _selecionar_alimentos(con, r["nome"], aluno_id)
+                ids = []
+                for pn in nomes:
+                    row = con.execute(
+                        "SELECT id FROM alimentos WHERE nome = ? ORDER BY id LIMIT 1", (pn,)
+                    ).fetchone()
+                    if row:
+                        ids.append(row["id"])
+                pares = _pares_automaticos(
+                    con,
+                    [(aid, 0) for aid in ids],
+                    (r["calorias"] or 0, r["proteinas"] or 0, r["carbs"] or 0, r["gorduras"] or 0),
+                )
+            gravar_alimentos(con, r["id"], pares)
+    else:
+        for r in refs:
+            nomes = _selecionar_alimentos(con, r["nome"], aluno_id)
+            ids = []
+            for pn in nomes:
+                row = con.execute(
+                    "SELECT id FROM alimentos WHERE nome = ? ORDER BY id LIMIT 1", (pn,)
+                ).fetchone()
+                if row:
+                    ids.append(row["id"])
+            pares = _pares_automaticos(
+                con,
+                [(aid, 0) for aid in ids],
+                (r["calorias"] or 0, r["proteinas"] or 0, r["carbs"] or 0, r["gorduras"] or 0),
+            )
+            gravar_alimentos(con, r["id"], pares)
     con.commit()
     flash("Dieta gerada e aplicada ao aluno.", "success")
     return redirect(url_for("dieta", aluno_id=aluno_id))

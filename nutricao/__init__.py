@@ -25,6 +25,11 @@ from .database import (
 )
 from .tbca import importar_tbca_csv
 from .openfoodfacts import importar_produto, buscar_produtos
+from .optimizer import DietPlanOptimizer
+from .scoring import score_dieta, score_refeicao
+from .equivalencias import normalizar_grupo, tipo_equivalencia, filtrar_por_grupo
+from .portions import resolve_faixa_porcao, clamp_portion, qualidade_porcoes
+from .substitutions import calcular_substituicoes
 
 __all__ = [
     "normalizar_nome",
@@ -38,4 +43,14 @@ __all__ = [
     "importar_tbca_csv",
     "importar_produto",
     "buscar_produtos",
+    "DietPlanOptimizer",
+    "score_dieta",
+    "score_refeicao",
+    "normalizar_grupo",
+    "tipo_equivalencia",
+    "filtrar_por_grupo",
+    "resolve_faixa_porcao",
+    "clamp_portion",
+    "qualidade_porcoes",
+    "calcular_substituicoes",
 ]
