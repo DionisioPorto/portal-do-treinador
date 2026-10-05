@@ -4114,7 +4114,7 @@ def aplicar_treino(aluno_id):
     for i, t in enumerate(treinos, start=1):
         cur = con.execute(
             "INSERT INTO treinos (aluno_id, nome, dia_semana, notas, ordem) VALUES (?, ?, ?, ?, ?)",
-            (aluno_id, t["nome"], semana[i - 1] or "", "Gerado pelo assistente (low volume · foco masculinização).", i),
+            (aluno_id, t["nome"], semana[i - 1] or "", "", i),
         )
         for j, e in enumerate(t["itens"], start=1):
             con.execute(

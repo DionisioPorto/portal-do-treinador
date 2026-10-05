@@ -40,7 +40,7 @@
         {{ t['nome'] }}
         {% if t['dia_semana'] %}<span class="muted" style="font-weight:600;">· {{ t['dia_semana'] }}</span>{% endif %}
       </h2>
-      {% if t['notas'] %}<p class="muted small" style="margin-top:-6px;">{{ t['notas'] }}</p>{% endif %}
+      {% if t['notas'] and not t['notas'].startswith('Gerado pelo assistente') %}<p class="muted small" style="margin-top:-6px;">{{ t['notas'] }}</p>{% endif %}
       <table class="table">
         <thead>
           <tr><th>Exercício</th><th>Séries</th><th>Repetições</th><th>RIR</th><th>Descanso</th><th>Carga</th></tr>
