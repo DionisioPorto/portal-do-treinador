@@ -456,6 +456,23 @@ class DietPlanOptimizer:
         for repeticoes in nomes_repetidos.values():
             if len(repeticoes) > 1:
                 perda += 0.15 * (len(repeticoes) - 1)
+        quantidades_ideais = {
+            "cafe da manha": (3, 0.003),
+            "lanche da manha": (2, 0.01),
+            "lanche da tarde": (2, 0.01),
+            "almoco": (4, 0.003),
+            "jantar": (3, 0.003),
+        }
+        for refeicao in refeicoes:
+            nome = self._sem_acentos(refeicao.get("nome") or "")
+            quantidade_ideal, penalidade_por_item = quantidades_ideais.get(
+                nome, (3, 0.003)
+            )
+            itens_extras = max(
+                0,
+                len(refeicao.get("alimentos", [])) - quantidade_ideal,
+            )
+            perda += itens_extras * penalidade_por_item
         return perda
 
     def _recalcular_totais_refeicoes(self, refeicoes: Sequence[Mapping]) -> None:
