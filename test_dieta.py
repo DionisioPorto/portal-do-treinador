@@ -156,11 +156,31 @@ def test_geracao_rick_escolhe_combinacao_e_equilibra_proteina():
                 "Café da manhã": [{
                     "papel": "proteína",
                     "candidatos": ["Queijo cottage"],
-                }]
+                }],
+                "Almoço": [{
+                    "papel": "proteína",
+                    "candidatos": ["Peito de frango grelhado"],
+                }],
             },
             alimentos_ativos=alimentos,
         )
-        assert len(optimizer._opcoes_por_refeicao("Café da manhã")[0][1]) > 12
+        opcoes_cafe = optimizer._opcoes_por_refeicao("Café da manhã")[0][1]
+        assert all(
+        not any(
+            termo in item["nome"].casefold()
+            for termo in ("frango", "carne", "tilápia", "merluza", "peixe")
+        )
+        for item in opcoes_cafe
+        )
+        optimizer_catalogo = DietPlanOptimizer(
+        meta_calorica_diaria=1963,
+        proteina_diaria=150,
+        carboidrato_diario=218,
+        gordura_diaria=55,
+        quantidade_refeicoes=1,
+        alimentos_ativos=alimentos,
+        )
+        assert len(optimizer_catalogo._candidatos_para_refeicao("Almoço")) > 12
 
         plano = _gerar_dieta_automaticamente(con, aluno_id, metas)
         assert plano and plano["status"] == "ok"
@@ -169,6 +189,11 @@ def test_geracao_rick_escolhe_combinacao_e_equilibra_proteina():
         for refeicao in plano["refeicoes"]:
             proteina_refeicao = 0.0
             for item in refeicao["alimentos"]:
+                if refeicao["nome"] in {"Café da manhã", "Lanche da manhã", "Lanche da tarde"}:
+                    assert not any(
+                        termo in item["nome"].casefold()
+                        for termo in ("frango", "carne", "tilápia", "merluza", "peixe")
+                    )
                 alimento = con.execute(
                     "SELECT * FROM alimentos WHERE nome = ?", (item["nome"],)
                 ).fetchone()

@@ -12,6 +12,7 @@ Este módulo fornece um gerador diário de dieta que prioriza:
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Iterable, Mapping, Sequence
 
 from .equivalencias import normalizar_grupo, tipo_equivalencia
@@ -38,6 +39,13 @@ GRUPOS_POR_PAPEL = {
     "gordura": {"gordura"},
 }
 
+PROTEINAS_CAFE_LANCHE = {
+    "ovo", "omelete", "whey", "iogurte", "cottage", "queijo", "leite", "ricota",
+}
+PROTEINAS_CARNE_PEIXE = {
+    "frango", "carne", "tilapia", "merluza", "salmao", "atum", "peixe",
+    "alcatra", "lagarto", "sobrecoxa", "peru",
+}
 PESOS_MACROS = {"proteinas": 3.0, "kcal": 2.5, "carbs": 1.5, "gorduras": 1.5}
 DISTRIBUICAO_PROTEINA_REFEICOES = {
     "Café da manhã": 0.20,
@@ -208,6 +216,16 @@ class DietPlanOptimizer:
                     if not candidato.get("refeicoes_permitidas")
                     or nome_refeicao.lower() in str(candidato["refeicoes_permitidas"]).lower()
                 ]
+                pool = [
+                    candidato for candidato in pool
+                    if self._candidato_adequado(nome_refeicao, papel, candidato)
+                ]
+                pool.sort(
+                    key=lambda candidato: (
+                        -self._pontuar_adequacao(nome_refeicao, papel, candidato),
+                        str(candidato.get("nome") or "").casefold(),
+                    )
+                )
                 opcoes.append((papel, self._deduplicar_alimentos(pool)))
             return [(papel, pool) for papel, pool in opcoes if pool]
 
@@ -215,6 +233,82 @@ class DietPlanOptimizer:
             (normalizar_grupo(item.get("grupo_equiv") or item.get("grupo") or item.get("categoria")), [item])
             for item in self._candidatos_para_refeicao(nome_refeicao)
         ]
+
+    @staticmethod
+    def _sem_acentos(texto: object) -> str:
+        return "".join(
+            caractere
+            for caractere in unicodedata.normalize("NFKD", str(texto or "").casefold())
+            if not unicodedata.combining(caractere)
+        )
+
+    @classmethod
+    def _texto_alimento(cls, alimento: Mapping) -> str:
+        return cls._sem_acentos(" ".join(
+            str(alimento.get(campo) or "")
+            for campo in ("nome", "categoria", "grupo_equiv", "grupo")
+        ))
+
+    @staticmethod
+    def _contem_termo(texto: str, termos: set[str]) -> bool:
+        return any(termo in texto for termo in termos)
+
+    def _candidato_adequado(self, nome_refeicao: str, papel: str, alimento: Mapping) -> bool:
+        if papel != "proteina":
+            return True
+        refeicao = self._sem_acentos(nome_refeicao)
+        nome = self._texto_alimento(alimento)
+        grupo = normalizar_grupo(
+            alimento.get("grupo_equiv") or alimento.get("grupo") or alimento.get("categoria")
+        )
+        eh_laticinio = grupo == "laticinio" or self._contem_termo(
+            nome, {"iogurte", "cottage", "queijo", "leite", "ricota", "whey"}
+        )
+        eh_ovo = self._contem_termo(nome, {"ovo", "omelete"})
+        eh_carne_peixe = self._contem_termo(nome, PROTEINAS_CARNE_PEIXE)
+
+        if refeicao == "cafe da manha":
+            return eh_laticinio or eh_ovo
+        if refeicao.startswith("lanche"):
+            return eh_laticinio or eh_ovo
+        if refeicao == "almoco":
+            return grupo == "proteina" and (eh_carne_peixe or eh_ovo)
+        if refeicao == "jantar":
+            return grupo == "proteina" and (eh_carne_peixe or eh_ovo)
+        return True
+
+    def _pontuar_adequacao(self, nome_refeicao: str, papel: str, alimento: Mapping) -> float:
+        nome = self._texto_alimento(alimento)
+        grupo = normalizar_grupo(
+            alimento.get("grupo_equiv") or alimento.get("grupo") or alimento.get("categoria")
+        )
+        pontuacao = 0.0
+        refeicao = self._sem_acentos(nome_refeicao)
+        if papel == "proteina":
+            if refeicao in {"cafe da manha", "lanche da manha", "lanche da tarde"}:
+                if self._contem_termo(nome, {"ovo", "omelete", "whey"}):
+                    pontuacao += 5.0
+                if grupo == "laticinio" or self._contem_termo(
+                    nome, {"iogurte", "cottage", "queijo", "leite", "ricota"}
+                ):
+                    pontuacao += 5.0
+            elif refeicao in {"almoco", "jantar"}:
+                if self._contem_termo(nome, PROTEINAS_CARNE_PEIXE):
+                    pontuacao += 5.0
+                if self._contem_termo(nome, {"ovo", "omelete"}):
+                    pontuacao += 2.0
+        elif papel in {"carboidrato", "amido"}:
+            if refeicao == "cafe da manha" and self._contem_termo(
+                nome, {"pao", "aveia", "granola", "tapioca"}
+            ):
+                pontuacao += 4.0
+            if refeicao in {"almoco", "jantar"} and grupo == "amido":
+                pontuacao += 3.0
+        elif papel == "gordura" and refeicao.startswith("lanche"):
+            pontuacao += 2.0
+        if alimento.get("_preferido", False):
+            pontuacao += 0.5
+        return pontuacao
 
     @staticmethod
     def _deduplicar_alimentos(alimentos: Iterable[Mapping]) -> list[dict]:
@@ -226,7 +320,7 @@ class DietPlanOptimizer:
                     unicos[chave] = dict(alimento)
         return list(unicos.values())
 
-    def _item_para_refeicao(self, alimento: Mapping, papel: str) -> dict:
+    def _item_para_refeicao(self, alimento: Mapping, papel: str, nome_refeicao: str) -> dict:
         faixa = resolve_faixa_porcao(alimento)
         padrao = float(alimento.get("porcao_padrao") or faixa[1]) if alimento.get("porcao_padrao") else faixa[1]
         grupo = alimento.get("grupo_equiv") or alimento.get("grupo") or alimento.get("categoria") or ""
@@ -244,6 +338,7 @@ class DietPlanOptimizer:
             "tipo": tipo_equivalencia(grupo),
             "_slot": papel,
             "_preferido": bool(alimento.get("_preferido", True)),
+            "_adequacao": self._pontuar_adequacao(nome_refeicao, papel, alimento),
         }
 
     def _buscar_por_nome(self, nome: str) -> list[dict]:
@@ -273,12 +368,18 @@ class DietPlanOptimizer:
         itens = []
         opcoes = self._opcoes_por_refeicao(nome_refeicao)
         for papel, pool in opcoes:
-            selecionado = pool[0]
-            item = self._item_para_refeicao(selecionado, papel)
+            selecionado = max(
+                pool,
+                key=lambda candidato: self._pontuar_adequacao(nome_refeicao, papel, candidato),
+            )
+            item = self._item_para_refeicao(selecionado, papel, nome_refeicao)
             if selecionado.get("quantidade") or selecionado.get("qtd"):
                 faixa = (item["porcao_min"], item["porcao_padrao"], item["porcao_max"])
                 item["quantidade"] = round(clamp_portion(float(selecionado.get("quantidade") or selecionado.get("qtd")), faixa), 1)
-            item["_opcoes"] = [self._item_para_refeicao(candidato, papel) for candidato in pool]
+            item["_opcoes"] = [
+                self._item_para_refeicao(candidato, papel, nome_refeicao)
+                for candidato in pool
+            ]
             itens.append(item)
 
         if not itens:
@@ -329,6 +430,7 @@ class DietPlanOptimizer:
                 perda += 0.025 * desvio * desvio
                 if not item.get("_preferido", True):
                     perda += 0.025
+                perda -= float(item.get("_adequacao") or 0.0) * 0.002
                 if item.get("_slot") in {"proteina", "fruta", "gordura"}:
                     nome = str(item.get("nome") or "").strip().lower()
                     if nome:
@@ -458,6 +560,7 @@ class DietPlanOptimizer:
                 item.pop("_opcoes", None)
                 item.pop("_slot", None)
                 item.pop("_preferido", None)
+                item.pop("_adequacao", None)
         return {"refeicoes": refeicoes, "totais": totais, "score": round(score, 2), "avisos": avisos, "status": status}
 
     def optimize(self):
