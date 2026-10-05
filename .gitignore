@@ -3,3 +3,6 @@ dados.db.bak
 uploads/
 __pycache__/
 *.pyc
+tbca-data/
+.pytest_cache/
+*.db-journal

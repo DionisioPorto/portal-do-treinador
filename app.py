@@ -141,7 +141,22 @@ CREATE TABLE IF NOT EXISTS alimentos (
     proteinas REAL DEFAULT 0,
     carbs REAL DEFAULT 0,
     gorduras REAL DEFAULT 0,
-    porcao REAL DEFAULT 100
+    porcao REAL DEFAULT 100,
+    porcao_min REAL DEFAULT 0,
+    porcao_max REAL DEFAULT 0,
+    porcao_padrao REAL DEFAULT 0,
+    refeicoes_permitidas TEXT DEFAULT '',
+    tipo_equivalencia TEXT DEFAULT '',
+    fonte TEXT DEFAULT 'manual',
+    codigo_fonte TEXT DEFAULT '',
+    marca TEXT DEFAULT '',
+    nome_normalizado TEXT DEFAULT '',
+    unidade_base TEXT DEFAULT 'g',
+    ativo INTEGER DEFAULT 1,
+    qualidade_dados TEXT DEFAULT 'media',
+    origem_confiavel INTEGER DEFAULT 0,
+    data_importacao TEXT DEFAULT (datetime('now','localtime')),
+    data_atualizacao TEXT DEFAULT (datetime('now','localtime'))
 );
 
 CREATE TABLE IF NOT EXISTS refeicao_alimentos (
@@ -1370,22 +1385,48 @@ def seed_alimentos():
         return
     for nome, categoria, equiv in ALIMENTOS:
         k, p, c, g, porcao = NUTRI_ALIMENTOS.get(nome, (0, 0, 0, 0, 100))
+        mn, ide, mx = PORCOES_POR_NOME.get(nome, PORCOES_POR_GRUPO.get(equiv, (porcao * 0.5, porcao, porcao * 1.6)))
+        tipo_eq = _tipo_equivalencia_por_grupo(equiv)
         con.execute(
-            "INSERT INTO alimentos (nome, categoria, grupo_equiv, kcal, proteinas, carbs, gorduras, porcao) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (nome, categoria, equiv, k, p, c, g, porcao),
+            "INSERT INTO alimentos (nome, categoria, grupo_equiv, kcal, proteinas, carbs, gorduras, porcao, "
+            "porcao_min, porcao_max, porcao_padrao, refeicoes_permitidas, tipo_equivalencia) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (nome, categoria, equiv, k, p, c, g, porcao, mn, mx, ide, "", tipo_eq),
         )
     con.commit()
+
+
+def _tipo_equivalencia_por_grupo(grupo):
+    """Determina o tipo de equivalência baseado no grupo alimentar."""
+    if grupo in ("amido", "pao", "cereal", "leguminosa"):
+        return "carboidrato"
+    if grupo in ("proteina", "laticinio"):
+        return "proteina"
+    if grupo == "gordura":
+        return "gordura"
+    if grupo in ("fruta", "doce"):
+        return "carboidrato"
+    if grupo in ("legume", "verdura_folha"):
+        return "vegetal"
+    return "outro"
 
 
 def atualizar_nutri():
     """Preenche a nutrição dos alimentos já cadastrados (base por 100 g)."""
     con = get_db()
     for nome, (k, p, c, g, porcao) in NUTRI_ALIMENTOS.items():
+        mn, ide, mx = PORCOES_POR_NOME.get(nome, PORCOES_POR_GRUPO.get(
+            con.execute("SELECT grupo_equiv FROM alimentos WHERE nome = ?", (nome,)).fetchone()["grupo_equiv"] if con.execute("SELECT grupo_equiv FROM alimentos WHERE nome = ?", (nome,)).fetchone() else "amido",
+            (porcao * 0.5, porcao, porcao * 1.6)
+        ))
+        grupo = con.execute("SELECT grupo_equiv FROM alimentos WHERE nome = ?", (nome,)).fetchone()
+        grupo = grupo["grupo_equiv"] if grupo else "amido"
+        tipo_eq = _tipo_equivalencia_por_grupo(grupo)
         con.execute(
-            """UPDATE alimentos SET kcal = ?, proteinas = ?, carbs = ?, gorduras = ?, porcao = ?
+            """UPDATE alimentos SET kcal = ?, proteinas = ?, carbs = ?, gorduras = ?, porcao = ?,
+               porcao_min = ?, porcao_max = ?, porcao_padrao = ?, tipo_equivalencia = ?
                WHERE nome = ? AND (kcal IS NULL OR kcal = 0)""",
-            (k, p, c, g, porcao, nome),
+            (k, p, c, g, porcao, mn, mx, ide, tipo_eq, nome),
         )
     con.commit()
 
@@ -1398,7 +1439,8 @@ def montar_alimentos(con, refeicoes):
     ph = ",".join("?" * len(ids))
     rows = con.execute(
         f"""SELECT ra.refeicao_id AS rid, a.id AS aid, a.nome, a.categoria, a.grupo_equiv,
-                 a.kcal, a.proteinas, a.carbs, a.gorduras, a.porcao, ra.qtd
+                 a.kcal, a.proteinas, a.carbs, a.gorduras, a.porcao, ra.qtd,
+                 a.porcao_min, a.porcao_max, a.porcao_padrao, a.tipo_equivalencia
             FROM refeicao_alimentos ra
             JOIN alimentos a ON a.id = ra.alimento_id
             WHERE ra.refeicao_id IN ({ph})
@@ -1407,12 +1449,25 @@ def montar_alimentos(con, refeicoes):
     ).fetchall()
     for r in rows:
         mapa[r["rid"]].append(r)
-    equivs = {}
-    for a in con.execute("SELECT nome, grupo_equiv FROM alimentos").fetchall():
-        equivs.setdefault(a["grupo_equiv"], []).append(a["nome"])
     for rid, itens in mapa.items():
-        mapa[rid] = [
-            {
+        mapa[rid] = []
+        for r in itens:
+            # Calcula substituições com gramas
+            subs_com_gramas = calcular_substituicoes(
+                {
+                    "nome": r["nome"],
+                    "kcal": r["kcal"] or 0,
+                    "proteinas": r["proteinas"] or 0,
+                    "carbs": r["carbs"] or 0,
+                    "gorduras": r["gorduras"] or 0,
+                    "porcao_min": r["porcao_min"] or 0,
+                    "porcao_max": r["porcao_max"] or 0,
+                },
+                r["qtd"] or 0,
+                r["grupo_equiv"],
+                con
+            )
+            mapa[rid].append({
                 "nome": r["nome"],
                 "categoria": r["categoria"],
                 "qtd": r["qtd"] or 0,
@@ -1421,10 +1476,8 @@ def montar_alimentos(con, refeicoes):
                 "carbs": r["carbs"] or 0,
                 "gorduras": r["gorduras"] or 0,
                 "porcao": r["porcao"] or 100,
-                "subs": [n for n in equivs.get(r["grupo_equiv"], []) if n != r["nome"]],
-            }
-            for r in itens
-        ]
+                "subs": subs_com_gramas,
+            })
     return mapa
 
 
@@ -1434,7 +1487,24 @@ _FAT_GRUPOS = ("gordura",)
 
 
 def _faixa_porcao(x):
-    """Faixa (mínimo, ideal, máximo) de um alimento: nome sobrescreve o grupo."""
+    """Faixa (mínimo, ideal, máximo) de um alimento.
+    
+    Prioridade:
+    1. Valores do banco (porcao_min, porcao_max, porcao_padrao) se definidos
+    2. Constantes do código (PORCOES_POR_NOME, PORCOES_POR_GRUPO) como fallback
+    """
+    # Se tem valores do banco, usa eles (permite edição via admin)
+    porcao_min = x.get("porcao_min")
+    porcao_max = x.get("porcao_max")
+    porcao_padrao = x.get("porcao_padrao")
+    
+    if porcao_min is not None and porcao_max is not None and porcao_max > 0:
+        mn = float(porcao_min)
+        mx = float(porcao_max)
+        ide = float(porcao_padrao) if porcao_padrao and porcao_padrao > 0 else (mn + mx) / 2
+        return (mn, ide, mx)
+    
+    # Fallback para constantes do código
     nome = (x.get("nome") or "").strip()
     if nome in PORCOES_POR_NOME:
         return PORCOES_POR_NOME[nome]
@@ -1507,11 +1577,11 @@ def calcular_gramas(itens, kcal_t=0, p_t=0, c_t=0, g_t=0):
 
     prot = [x for x in it if x["grupo"] in PROTEICOS]
     carb = [x for x in it if x["grupo"] in CARBUOS]
+    fixos_p = [x for x in it if x not in prot]
+    fixos_c = [x for x in it if x not in carb]
     if prot:
-        fixos_p = [x for x in it if x not in prot]
         escalar(prot, "p", p_t, fixos_p)
     if carb:
-        fixos_c = [x for x in it if x not in carb]
         escalar(carb, "c", c_t, fixos_c)
 
     # Fase A.2 - reequilíbrio: aproxima P e C das metas (dentro da tolerância),
@@ -1596,6 +1666,76 @@ def _resolver_qtds(con, itens, kcal_t, p_t, c_t, g_t):
     return [(int(x["aid"]), max(0, int(round(x["qtd"])))) for x in res]
 
 
+def calcular_substituicoes(alimento_base, quantidade_base, grupo_equiv, con=None):
+    """Calcula substituições com quantidades em gramas para um alimento.
+    
+    Args:
+        alimento_base: dict com dados do alimento original (nome, kcal, proteinas, carbs, gorduras, porcao_min, porcao_max)
+        quantidade_base: quantidade em gramas do alimento original
+        grupo_equiv: grupo de equivalência para buscar substitutos
+        con: conexão com o banco (opcional)
+    
+    Returns:
+        lista de dicts com substituições calculadas:
+        [{"alimento": str, "quantidade_g": float, "kcal": float, "proteinas": float, "carbs": float, "gorduras": float}, ...]
+    """
+    if con is None:
+        con = get_db()
+    
+    # Busca alimentos do mesmo grupo de equivalência
+    candidatos = con.execute(
+        """SELECT * FROM alimentos 
+           WHERE grupo_equiv = ? AND nome != ?
+           ORDER BY nome""",
+        (grupo_equiv, alimento_base.get("nome", ""))
+    ).fetchall()
+    
+    if not candidatos:
+        return []
+    
+    # Calcula os nutrientes do alimento base na quantidade usada
+    fator = quantidade_base / 100.0
+    kcal_base = (alimento_base.get("kcal") or 0) * fator
+    prot_base = (alimento_base.get("proteinas") or 0) * fator
+    carb_base = (alimento_base.get("carbs") or 0) * fator
+    gord_base = (alimento_base.get("gorduras") or 0) * fator
+    
+    substituicoes = []
+    for cand in candidatos:
+        # Calcula quantidade necessária para equivaler as calorias
+        kcal_100 = cand["kcal"] or 0
+        if kcal_100 <= 0:
+            continue
+        
+        # Quantidade para igualar calorias
+        qtd_kcal = (kcal_base / kcal_100) * 100
+        
+        # Respeita limites de porção
+        porcao_min = cand["porcao_min"] or 0
+        porcao_max = cand["porcao_max"] or 0
+        
+        if porcao_max > 0:
+            qtd_kcal = max(porcao_min, min(porcao_max, qtd_kcal))
+        
+        # Calcula macros resultantes
+        fator_cand = qtd_kcal / 100.0
+        kcal_cand = kcal_100 * fator_cand
+        prot_cand = (cand["proteinas"] or 0) * fator_cand
+        carb_cand = (cand["carbs"] or 0) * fator_cand
+        gord_cand = (cand["gorduras"] or 0) * fator_cand
+        
+        substituicoes.append({
+            "alimento": cand["nome"],
+            "quantidade_g": round(qtd_kcal),
+            "kcal": round(kcal_cand, 1),
+            "proteinas": round(prot_cand, 1),
+            "carbs": round(carb_cand, 1),
+            "gorduras": round(gord_cand, 1),
+        })
+    
+    return substituicoes
+
+
 def migrar():
     con = get_db()
     cols = [r["name"] for r in con.execute("PRAGMA table_info(alunos)").fetchall()]
@@ -1621,6 +1761,21 @@ def migrar():
         "carbs": "REAL DEFAULT 0",
         "gorduras": "REAL DEFAULT 0",
         "porcao": "REAL DEFAULT 100",
+        "porcao_min": "REAL DEFAULT 0",
+        "porcao_max": "REAL DEFAULT 0",
+        "porcao_padrao": "REAL DEFAULT 0",
+        "refeicoes_permitidas": "TEXT DEFAULT ''",
+        "tipo_equivalencia": "TEXT DEFAULT ''",
+        "fonte": "TEXT DEFAULT 'manual'",
+        "codigo_fonte": "TEXT DEFAULT ''",
+        "marca": "TEXT DEFAULT ''",
+        "nome_normalizado": "TEXT DEFAULT ''",
+        "unidade_base": "TEXT DEFAULT 'g'",
+        "ativo": "INTEGER DEFAULT 1",
+        "qualidade_dados": "TEXT DEFAULT 'media'",
+        "origem_confiavel": "INTEGER DEFAULT 0",
+        "data_importacao": "TEXT DEFAULT ''",
+        "data_atualizacao": "TEXT DEFAULT ''",
     }
     for col, tipo in novas_a.items():
         if col not in cols_a:
@@ -3002,20 +3157,134 @@ def novo_alimento():
     if nome and categoria and grupo_equiv:
         con = get_db()
         con.execute(
-            """INSERT INTO alimentos (nome, categoria, grupo_equiv, kcal, proteinas, carbs, gorduras, porcao)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO alimentos (nome, categoria, grupo_equiv, kcal, proteinas, carbs, gorduras, porcao,
+               porcao_min, porcao_max, porcao_padrao, refeicoes_permitidas, tipo_equivalencia)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (nome, categoria, grupo_equiv,
              num(request.form.get("kcal", ""), 0) or 0,
              num(request.form.get("proteinas", ""), 0) or 0,
              num(request.form.get("carbs", ""), 0) or 0,
              num(request.form.get("gorduras", ""), 0) or 0,
-             num(request.form.get("porcao", ""), 100) or 1),
+             num(request.form.get("porcao", ""), 100) or 1,
+             num(request.form.get("porcao_min", ""), 0) or 0,
+             num(request.form.get("porcao_max", ""), 0) or 0,
+             num(request.form.get("porcao_padrao", ""), 0) or 0,
+             request.form.get("refeicoes_permitidas", "").strip(),
+             request.form.get("tipo_equivalencia", "").strip()),
         )
         con.commit()
         flash("Alimento adicionado ao catálogo.", "success")
         return redirect(url_for("dieta", aluno_id=aluno_id)) if aluno_id else redirect(url_for("alunos"))
     flash("Preencha nome, categoria e grupo de substituição.", "error")
     return redirect(url_for("dieta", aluno_id=aluno_id)) if aluno_id else redirect(url_for("alunos"))
+
+
+@app.route("/alimento/<int:alimento_id>/dados")
+def alimento_dados(alimento_id):
+    """Retorna os dados de um alimento em JSON (para edição via AJAX)."""
+    con = get_db()
+    a = con.execute("SELECT * FROM alimentos WHERE id = ?", (alimento_id,)).fetchone()
+    if not a:
+        return {"erro": "Alimento não encontrado"}, 404
+    return {
+        "id": a["id"],
+        "nome": a["nome"],
+        "categoria": a["categoria"],
+        "grupo_equiv": a["grupo_equiv"],
+        "kcal": a["kcal"],
+        "proteinas": a["proteinas"],
+        "carbs": a["carbs"],
+        "gorduras": a["gorduras"],
+        "porcao": a["porcao"],
+        "porcao_min": a["porcao_min"],
+        "porcao_max": a["porcao_max"],
+        "porcao_padrao": a["porcao_padrao"],
+        "refeicoes_permitidas": a["refeicoes_permitidas"],
+        "tipo_equivalencia": a["tipo_equivalencia"],
+    }
+
+
+@app.route("/alimento/<int:alimento_id>/editar", methods=["POST"])
+def editar_alimento(alimento_id):
+    """Rota para editar um alimento existente (interface administrativa)."""
+    con = get_db()
+    alimento = con.execute("SELECT * FROM alimentos WHERE id = ?", (alimento_id,)).fetchone()
+    if not alimento:
+        flash("Alimento não encontrado.", "error")
+        return redirect(url_for("alunos"))
+    
+    nome = request.form.get("nome", "").strip()
+    if not nome:
+        flash("Nome do alimento é obrigatório.", "error")
+        return redirect(url_for("alunos"))
+    
+    grupo_equiv = request.form.get("grupo_equiv", "").strip()
+    tipo_equivalencia = request.form.get("tipo_equivalencia", "").strip()
+    
+    con.execute(
+        """UPDATE alimentos SET
+           nome = ?, categoria = ?, grupo_equiv = ?,
+           kcal = ?, proteinas = ?, carbs = ?, gorduras = ?, porcao = ?,
+           porcao_min = ?, porcao_max = ?, porcao_padrao = ?,
+           refeicoes_permitidas = ?, tipo_equivalencia = ?
+           WHERE id = ?""",
+        (nome,
+         request.form.get("categoria", "").strip(),
+         grupo_equiv,
+         num(request.form.get("kcal", ""), 0) or 0,
+         num(request.form.get("proteinas", ""), 0) or 0,
+         num(request.form.get("carbs", ""), 0) or 0,
+         num(request.form.get("gorduras", ""), 0) or 0,
+         num(request.form.get("porcao", ""), 100) or 1,
+         num(request.form.get("porcao_min", ""), 0) or 0,
+         num(request.form.get("porcao_max", ""), 0) or 0,
+         num(request.form.get("porcao_padrao", ""), 0) or 0,
+         request.form.get("refeicoes_permitidas", "").strip(),
+         tipo_equivalencia,
+         alimento_id),
+    )
+    con.commit()
+    flash(f"Alimento '{nome}' atualizado com sucesso.", "success")
+    return redirect(url_for("alimentos_admin"))
+
+
+@app.route("/alimento/<int:alimento_id>/excluir", methods=["POST"])
+def excluir_alimento(alimento_id):
+    """Rota para excluir um alimento (apenas se não estiver em uso)."""
+    con = get_db()
+    alimento = con.execute("SELECT * FROM alimentos WHERE id = ?", (alimento_id,)).fetchone()
+    if not alimento:
+        flash("Alimento não encontrado.", "error")
+        return redirect(url_for("alimentos_admin"))
+    
+    # Verifica se o alimento está em uso em alguma refeição
+    em_uso = con.execute(
+        "SELECT COUNT(*) AS n FROM refeicao_alimentos WHERE alimento_id = ?",
+        (alimento_id,)
+    ).fetchone()["n"]
+    
+    if em_uso > 0:
+        flash(f"Não é possível excluir '{alimento['nome']}' porque está em uso em {em_uso} refeição(ões).", "error")
+        return redirect(url_for("alimentos_admin"))
+    
+    con.execute("DELETE FROM alimentos WHERE id = ?", (alimento_id,))
+    con.commit()
+    flash(f"Alimento '{alimento['nome']}' excluído com sucesso.", "success")
+    return redirect(url_for("alimentos_admin"))
+
+
+@app.route("/alimentos/admin")
+def alimentos_admin():
+    """Interface administrativa para gerenciar alimentos."""
+    con = get_db()
+    alimentos = con.execute("SELECT * FROM alimentos ORDER BY categoria, nome").fetchall()
+    return render_template(
+        "alimentos_admin.html",
+        active="alimentos",
+        alimentos=alimentos,
+        CATEGORIAS=CATEGORIAS,
+        EQUIV_LABELS=EQUIV_LABELS,
+    )
 
 
 @app.route("/aluno/<int:aluno_id>/acompanhamento")
@@ -3508,8 +3777,9 @@ def imprimir_treino(aluno_id):
 
 @app.route("/aluno/<int:aluno_id>/dieta/imprimir")
 def validar_dieta(aluno_id):
-    """Valida a dieta salva antes do PDF: porções dentro das faixas e totais
-    reais próximos das metas diárias. Devolve (avisos, reais, metas)."""
+    """Valida a dieta salva antes do PDF: porções dentro das faixas, totais
+    reais próximos das metas diárias e substituições com gramas.
+    Devolve (avisos, reais, metas)."""
     con = get_db()
     metas = con.execute("SELECT * FROM metas_dieta WHERE aluno_id = ?", (aluno_id,)).fetchone()
     refeicoes = con.execute(
@@ -3530,6 +3800,14 @@ def validar_dieta(aluno_id):
                 avisos.append(f"{x['nome']}: {round(q)} g ultrapassa o máximo ({round(mx)} g).")
             elif 0 < q < mn - 0.5:
                 avisos.append(f"{x['nome']}: {round(q)} g abaixo do mínimo ({round(mn)} g).")
+            # Verifica se substituições têm quantidades em gramas
+            subs = x.get("subs") or []
+            if not subs:
+                avisos.append(f"{x['nome']}: sem substituições calculadas.")
+            else:
+                for s in subs:
+                    if not s.get("quantidade_g"):
+                        avisos.append(f"{x['nome']}: substituição '{s.get('alimento')}' sem quantidade em gramas.")
     reais = {"calorias": k, "proteinas": p, "carbs": c, "gorduras": g}
     alvo = {
         "calorias": (metas["kcal_diaria"] or 0) if metas else 0,

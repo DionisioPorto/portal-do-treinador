@@ -82,7 +82,11 @@
                 <div>
                   <div class="strong" style="font-size:13px;">{{ f['nome'] }}{% if f['qtd'] %} · <span style="font-weight:600;">{{ f['qtd'] }} g</span>{% endif %}</div>
                   {% if f['subs'] %}
-                  <div class="muted small">Substitua por: {{ f['subs'] | join(', ') }}</div>
+                  <div class="muted small">Substitua por:
+                    {% for s in f['subs'] %}
+                    {{ s['alimento'] }}{% if s['quantidade_g'] %} ({{ s['quantidade_g'] }} g){% endif %}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
                   {% endif %}
                 </div>
                 {% endfor %}

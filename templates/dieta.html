@@ -69,7 +69,13 @@
               {% if f['subs'] %}
               <div class="food-subs">
                 <svg class="icon"><use href="#i-arLeft"/></svg>
-                <span>Substitua por: <strong>{{ f['subs'] | join(', ') }}</strong></span>
+                <span>Substitua por:
+                  <strong>
+                    {% for s in f['subs'] %}
+                    {{ s['alimento'] }}{% if s['quantidade_g'] %} ({{ s['quantidade_g'] }} g){% endif %}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                  </strong>
+                </span>
               </div>
               {% endif %}
             </div>

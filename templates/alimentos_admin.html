@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Administração de Alimentos · Portal{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h2 style="font-size:19px;">Administração de Alimentos</h2>
+    <div class="muted small">Edite valores nutricionais, porções e equivalências</div>
+  </div>
+  <div class="head-actions">
+    <a class="btn ghost" href="{{ url_for('alunos') }}">
+      <svg class="icon"><use href="#i-arLeft"/></svg>Voltar
+    </a>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h3><svg class="icon"><use href="#i-users"/></svg>Catálogo de Alimentos</h3>
+    <span class="chip">{{ alimentos|length }} alimentos</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Categoria</th>
+          <th>Grupo</th>
+          <th class="num">kcal/100g</th>
+          <th class="num">Prot</th>
+          <th class="num">Carb</th>
+          <th class="num">Gord</th>
+          <th class="num">Porção</th>
+          <th class="num">Mín</th>
+          <th class="num">Máx</th>
+          <th>Tipo Eq.</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in alimentos %}
+        <tr>
+          <td class="strong">{{ a['nome'] }}</td>
+          <td class="muted">{{ a['categoria'] }}</td>
+          <td class="muted">{{ a['grupo_equiv'] }}</td>
+          <td class="num">{{ a['kcal'] or 0 }}</td>
+          <td class="num">{{ a['proteinas'] or 0 }}</td>
+          <td class="num">{{ a['carbs'] or 0 }}</td>
+          <td class="num">{{ a['gorduras'] or 0 }}</td>
+          <td class="num">{{ a['porcao'] or 100 }} g</td>
+          <td class="num">{{ a['porcao_min'] or 0 }} g</td>
+          <td class="num">{{ a['porcao_max'] or 0 }} g</td>
+          <td class="muted">{{ a['tipo_equivalencia'] or '—' }}</td>
+          <td class="actions-cell">
+            <button type="button" class="btn ghost small" onclick="abrirEdicaoLimento({{ a['id'] }})">
+              <svg class="icon"><use href="#i-pencil"/></svg>Editar
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<dialog id="form-editar-alimento" class="modal">
+  <form method="post" id="form-editar-alimento-form">
+    <div class="modal-head">
+      <h2>Editar Alimento</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('form-editar-alimento').close()">
+        <svg class="icon"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <input type="hidden" name="alimento_id" id="edit-alimento-id">
+    <div class="field">
+      <label>Nome do alimento *</label>
+      <input name="nome" id="edit-nome" required>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Categoria</label>
+        <select name="categoria" id="edit-categoria">
+          {% for c in CATEGORIAS %}
+          <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>Grupo de substituição</label>
+        <select name="grupo_equiv" id="edit-grupo-equiv">
+          {% for k, v in EQUIV_LABELS.items() %}
+          <option value="{{ k }}">{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Valores por 100 g</label>
+      <div class="field-row">
+        <div class="field"><label>kcal</label><input type="number" step="0.1" name="kcal" id="edit-kcal"></div>
+        <div class="field"><label>Proteínas (g)</label><input type="number" step="0.1" name="proteinas" id="edit-proteinas"></div>
+        <div class="field"><label>Carboidratos (g)</label><input type="number" step="0.1" name="carbs" id="edit-carbs"></div>
+        <div class="field"><label>Gorduras (g)</label><input type="number" step="0.1" name="gorduras" id="edit-gorduras"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Limites de porção (g)</label>
+      <div class="field-row">
+        <div class="field"><label>Porção padrão</label><input type="number" name="porcao" id="edit-porcao"></div>
+        <div class="field"><label>Mínimo</label><input type="number" name="porcao_min" id="edit-porcao-min"></div>
+        <div class="field"><label>Máximo</label><input type="number" name="porcao_max" id="edit-porcao-max"></div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Tipo de equivalência</label>
+        <select name="tipo_equivalencia" id="edit-tipo-equivalencia">
+          <option value="carboidrato">Carboidrato</option>
+          <option value="proteina">Proteína</option>
+          <option value="gordura">Gordura</option>
+          <option value="vegetal">Vegetal</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Refeições permitidas</label>
+        <input type="text" name="refeicoes_permitidas" id="edit-refeicoes-permitidas" placeholder="Café da manhã, Almoço, Jantar">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn ghost" onclick="document.getElementById('form-editar-alimento').close()">Cancelar</button>
+      <button type="submit" class="btn primary">
+        <svg class="icon"><use href="#i-check"/></svg>Salvar alterações
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function abrirEdicaoLimento(id) {
+  // Busca os dados do alimento via API
+  fetch('/alimento/' + id + '/dados')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('edit-alimento-id').value = d.id;
+      document.getElementById('edit-nome').value = d.nome;
+      document.getElementById('edit-categoria').value = d.categoria;
+      document.getElementById('edit-grupo-equiv').value = d.grupo_equiv;
+      document.getElementById('edit-kcal').value = d.kcal;
+      document.getElementById('edit-proteinas').value = d.proteinas;
+      document.getElementById('edit-carbs').value = d.carbs;
+      document.getElementById('edit-gorduras').value = d.gorduras;
+      document.getElementById('edit-porcao').value = d.porcao;
+      document.getElementById('edit-porcao-min').value = d.porcao_min;
+      document.getElementById('edit-porcao-max').value = d.porcao_max;
+      document.getElementById('edit-tipo-equivalencia').value = d.tipo_equivalencia || '';
+      document.getElementById('edit-refeicoes-permitidas').value = d.refeicoes_permitidas || '';
+      document.getElementById('form-editar-alimento-form').action = '/alimento/' + id + '/editar';
+      document.getElementById('form-editar-alimento').showModal();
+    });
+}
+</script>
+{% endblock %}
