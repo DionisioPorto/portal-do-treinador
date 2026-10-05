@@ -3027,10 +3027,21 @@ def _gerar_dieta_automaticamente(con, aluno_id, c):
     """Gera uma dieta diária coerente usando o motor novo e preserva as metas do app."""
     estrutura = {}
     alimentos = con.execute("SELECT * FROM alimentos WHERE ativo = 1").fetchall()
-    for nome, _, _ in REFEICOES_MODELO:
-        selecionados = _selecionar_alimentos(con, nome, aluno_id)
-        if selecionados:
-            estrutura[nome] = selecionados
+    nomes_disponiveis = {str(alimento["nome"]).strip().lower() for alimento in alimentos}
+    for nome, slots in MONTAGEM_REFEICOES.items():
+        estrutura[nome] = []
+        for papel, candidatos in slots:
+            candidatos_validos = [
+                candidato for candidato in candidatos
+                if candidato.strip().lower() in nomes_disponiveis
+            ]
+            if not candidatos_validos:
+                continue
+            inicio = aluno_id % len(candidatos_validos)
+            rotacionados = candidatos_validos[inicio:] + candidatos_validos[:inicio]
+            estrutura[nome].append({"papel": papel, "candidatos": rotacionados})
+        if not estrutura[nome]:
+            del estrutura[nome]
     if not estrutura:
         return None
 

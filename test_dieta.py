@@ -34,6 +34,7 @@ from app import (
     calcular_gramas, calcular_substituicoes, validar_dieta,
     PORCOES_POR_NOME, PORCOES_POR_GRUPO, TOLERANCIAS_DIETA,
     _faixa_porcao, _totais_item, _tipo_equivalencia_por_grupo,
+    _gerar_dieta_automaticamente,
 )
 
 
@@ -70,6 +71,70 @@ def criar_aluno_teste(nome="Aluno Teste", peso=70, altura=175, sexo="M"):
         )
         con.commit()
         return aluno_id
+
+
+def test_geracao_diaria_meta_1912_sem_porcoes_irreais():
+    """Gera o cenário solicitado e confere estrutura, limites e macros do banco."""
+    with app.app_context():
+        con = get_db()
+        aluno_id = criar_aluno_teste(nome="Aluno Meta 1912")
+        metas = {"meta_kcal": 1912, "proteina": 150, "carbo": 208, "gordura": 53}
+        plano = _gerar_dieta_automaticamente(con, aluno_id, metas)
+
+        assert plano and len(plano["refeicoes"]) == 5
+        totais_banco = {"kcal": 0.0, "proteinas": 0.0, "carbs": 0.0, "gorduras": 0.0}
+        estrutura_esperada = {
+            "Café da manhã": ({"proteina", "laticinio"}, {"amido", "pao", "cereal"}, {"fruta"}),
+            "Lanche da manhã": ({"proteina", "laticinio"}, {"fruta"}, {"gordura"}),
+            "Almoço": (
+                {"amido", "pao", "cereal"}, {"leguminosa"}, {"proteina"},
+                {"verdura_folha"}, {"legume", "verdura_folha"},
+            ),
+            "Lanche da tarde": (
+                {"amido", "pao", "cereal"}, {"proteina", "laticinio"}, {"fruta"}, {"gordura"},
+            ),
+            "Jantar": (
+                {"amido", "pao", "cereal"}, {"proteina"}, {"verdura_folha"},
+                {"legume", "verdura_folha"}, {"gordura"},
+            ),
+        }
+        for refeicao in plano["refeicoes"]:
+            itens = refeicao["alimentos"]
+            assert itens, f"{refeicao['nome']} não pode ficar vazia"
+            grupos = {item["grupo"] for item in itens}
+            assert all(grupos.intersection(papel) for papel in estrutura_esperada[refeicao["nome"]])
+            totais_refeicao_banco = {
+                "kcal": 0.0, "proteinas": 0.0, "carbs": 0.0, "gorduras": 0.0,
+            }
+            for item in itens:
+                alimento = con.execute(
+                    "SELECT * FROM alimentos WHERE nome = ?", (item["nome"],)
+                ).fetchone()
+                assert alimento is not None
+                assert alimento["porcao_min"] <= item["quantidade"] <= alimento["porcao_max"]
+                fator = item["quantidade"] / 100
+                for chave, campo in (
+                    ("kcal", "kcal"), ("proteinas", "proteinas"),
+                    ("carbs", "carbs"), ("gorduras", "gorduras"),
+                ):
+                    macro = float(alimento[campo] or 0) * fator
+                    totais_banco[chave] += macro
+                    totais_refeicao_banco[chave] += macro
+            for chave, total in totais_refeicao_banco.items():
+                assert abs(total - refeicao["totais"][chave]) < 0.01
+
+        for chave, total in totais_banco.items():
+            assert abs(total - plano["totais"][chave]) < 0.01
+
+        assert abs(totais_banco["kcal"] - 1912) <= 1912 * TOLERANCIAS_DIETA["kcal_pct"] / 100
+        assert abs(totais_banco["proteinas"] - 150) <= TOLERANCIAS_DIETA["proteina"]
+        assert abs(totais_banco["carbs"] - 208) <= TOLERANCIAS_DIETA["carbo"]
+        assert abs(totais_banco["gorduras"] - 53) <= TOLERANCIAS_DIETA["gordura"]
+        assert all(
+            (item["nome"] != "Aveia em flocos" or item["quantidade"] <= 70)
+            and ("Azeite" not in item["nome"] or item["quantidade"] <= 20)
+            for refeicao in plano["refeicoes"] for item in refeicao["alimentos"]
+        )
 
 
 # =============================================================================
