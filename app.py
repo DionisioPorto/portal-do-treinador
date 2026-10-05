@@ -7,6 +7,7 @@ from pathlib import Path
 from flask import Flask, g, render_template, request, redirect, url_for, abort, flash, send_from_directory, session
 
 from nutricao.optimizer import DietPlanOptimizer
+from nutricao.substitutions import calcular_substituicoes as calcular_substituicoes_por_macro
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(
@@ -1695,47 +1696,12 @@ def calcular_substituicoes(alimento_base, quantidade_base, grupo_equiv, con=None
     if not candidatos:
         return []
     
-    # Calcula os nutrientes do alimento base na quantidade usada
-    fator = quantidade_base / 100.0
-    kcal_base = (alimento_base.get("kcal") or 0) * fator
-    prot_base = (alimento_base.get("proteinas") or 0) * fator
-    carb_base = (alimento_base.get("carbs") or 0) * fator
-    gord_base = (alimento_base.get("gorduras") or 0) * fator
-    
-    substituicoes = []
-    for cand in candidatos:
-        # Calcula quantidade necessária para equivaler as calorias
-        kcal_100 = cand["kcal"] or 0
-        if kcal_100 <= 0:
-            continue
-        
-        # Quantidade para igualar calorias
-        qtd_kcal = (kcal_base / kcal_100) * 100
-        
-        # Respeita limites de porção
-        porcao_min = cand["porcao_min"] or 0
-        porcao_max = cand["porcao_max"] or 0
-        
-        if porcao_max > 0:
-            qtd_kcal = max(porcao_min, min(porcao_max, qtd_kcal))
-        
-        # Calcula macros resultantes
-        fator_cand = qtd_kcal / 100.0
-        kcal_cand = kcal_100 * fator_cand
-        prot_cand = (cand["proteinas"] or 0) * fator_cand
-        carb_cand = (cand["carbs"] or 0) * fator_cand
-        gord_cand = (cand["gorduras"] or 0) * fator_cand
-        
-        substituicoes.append({
-            "alimento": cand["nome"],
-            "quantidade_g": round(qtd_kcal),
-            "kcal": round(kcal_cand, 1),
-            "proteinas": round(prot_cand, 1),
-            "carbs": round(carb_cand, 1),
-            "gorduras": round(gord_cand, 1),
-        })
-    
-    return substituicoes
+    return calcular_substituicoes_por_macro(
+        alimento_base,
+        quantidade_base,
+        grupo_equiv,
+        [dict(candidato) for candidato in candidatos],
+    )
 
 
 def migrar():

@@ -39,6 +39,13 @@ GRUPOS_POR_PAPEL = {
 }
 
 PESOS_MACROS = {"proteinas": 3.0, "kcal": 2.5, "carbs": 1.5, "gorduras": 1.5}
+DISTRIBUICAO_PROTEINA_REFEICOES = {
+    "Café da manhã": 0.20,
+    "Lanche da manhã": 0.10,
+    "Almoço": 0.30,
+    "Lanche da tarde": 0.15,
+    "Jantar": 0.25,
+}
 
 
 class DietPlanOptimizer:
@@ -131,7 +138,7 @@ class DietPlanOptimizer:
                 grupos = {normalizar_grupo(g) for g in restricoes.split(",") if g.strip()}
                 candidatos = [item for item in candidatos if normalizar_grupo(item.get("grupo_equiv") or item.get("grupo") or item.get("categoria")) in grupos]
 
-        return candidatos[:12]
+        return candidatos
 
     def _opcoes_por_refeicao(self, nome_refeicao: str) -> list[tuple[str, list[dict]]]:
         estrutura = self.estrutura_refeicoes if isinstance(self.estrutura_refeicoes, Mapping) else {}
@@ -146,17 +153,61 @@ class DietPlanOptimizer:
                 papel_original = str(slot.get("papel") or slot.get("grupo") or "").lower()
                 papel = normalizar_grupo(papel_original.translate(str.maketrans("áéíóúãõç", "aeiouaoc")))
                 permitidos = GRUPOS_POR_PAPEL.get(papel)
+                nomes_preferidos = {
+                    nome.strip().lower()
+                    for nome in slot.get("candidatos", [])
+                    if isinstance(nome, str)
+                }
                 pool = []
                 for nome in slot.get("candidatos", []):
                     if isinstance(nome, Mapping):
-                        pool.append(dict(nome))
+                        candidato = dict(nome)
+                        candidato["_preferido"] = True
+                        pool.append(candidato)
                     elif isinstance(nome, str):
-                        pool.extend(self._buscar_por_nome(nome))
+                        encontrados = self._buscar_por_nome(nome)
+                        for candidato in encontrados:
+                            candidato["_preferido"] = True
+                            pool.append(candidato)
                 if permitidos:
+                    grupos_candidatos = self.alimentos_ativos or self.alimentos_disponiveis or self.dados_nutricionais
+                    for candidato in grupos_candidatos:
+                        grupo = normalizar_grupo(
+                            candidato.get("grupo_equiv") or candidato.get("grupo") or candidato.get("categoria")
+                        )
+                        if grupo not in permitidos:
+                            continue
+                        permitido_em = str(candidato.get("refeicoes_permitidas") or "").strip()
+                        if permitido_em and nome_refeicao.lower() not in permitido_em.lower():
+                            continue
+                        candidato = dict(candidato)
+                        candidato["_preferido"] = str(candidato.get("nome") or "").strip().lower() in nomes_preferidos
+                        pool.append(candidato)
                     pool = [
-                        item for item in pool
-                        if normalizar_grupo(item.get("grupo_equiv") or item.get("grupo") or item.get("categoria")) in permitidos
+                        candidato for candidato in pool
+                        if normalizar_grupo(
+                            candidato.get("grupo_equiv") or candidato.get("grupo") or candidato.get("categoria")
+                        ) in permitidos
                     ]
+                if self.preferencias:
+                    restricoes = str(self.preferencias.get("grupos") or "")
+                    if restricoes:
+                        grupos = {
+                            normalizar_grupo(grupo)
+                            for grupo in restricoes.split(",")
+                            if grupo.strip()
+                        }
+                        pool = [
+                            candidato for candidato in pool
+                            if normalizar_grupo(
+                                candidato.get("grupo_equiv") or candidato.get("grupo") or candidato.get("categoria")
+                            ) in grupos
+                        ]
+                pool = [
+                    candidato for candidato in pool
+                    if not candidato.get("refeicoes_permitidas")
+                    or nome_refeicao.lower() in str(candidato["refeicoes_permitidas"]).lower()
+                ]
                 opcoes.append((papel, self._deduplicar_alimentos(pool)))
             return [(papel, pool) for papel, pool in opcoes if pool]
 
@@ -192,6 +243,7 @@ class DietPlanOptimizer:
             "gorduras": float(alimento.get("gorduras") or 0.0),
             "tipo": tipo_equivalencia(grupo),
             "_slot": papel,
+            "_preferido": bool(alimento.get("_preferido", True)),
         }
 
     def _buscar_por_nome(self, nome: str) -> list[dict]:
@@ -254,6 +306,20 @@ class DietPlanOptimizer:
             if meta > 0:
                 desvio = (totais[chave] - meta) / max(meta, 1.0)
                 perda += peso * desvio * desvio
+        meta_proteina = float(alvo.get("proteinas") or 0.0)
+        if meta_proteina > 0 and len(refeicoes) > 1:
+            for refeicao in refeicoes:
+                fracao = DISTRIBUICAO_PROTEINA_REFEICOES.get(
+                    str(refeicao.get("nome") or ""),
+                    1.0 / len(refeicoes),
+                )
+                proteina_refeicao = sum(
+                    self._totais_de_item(item)["proteinas"]
+                    for item in refeicao.get("alimentos", [])
+                )
+                desvio = (proteina_refeicao - meta_proteina * fracao) / meta_proteina
+                perda += 5.0 * desvio * desvio
+        nomes_repetidos = {}
         for refeicao in refeicoes:
             for item in refeicao.get("alimentos", []):
                 faixa = (item["porcao_min"], item["porcao_padrao"], item["porcao_max"])
@@ -261,6 +327,15 @@ class DietPlanOptimizer:
                 largura = max((faixa[2] - faixa[0]) / 2.0, 1.0)
                 desvio = (float(item["quantidade"]) - padrao) / largura
                 perda += 0.025 * desvio * desvio
+                if not item.get("_preferido", True):
+                    perda += 0.025
+                if item.get("_slot") in {"proteina", "fruta", "gordura"}:
+                    nome = str(item.get("nome") or "").strip().lower()
+                    if nome:
+                        nomes_repetidos.setdefault(nome, []).append(item)
+        for repeticoes in nomes_repetidos.values():
+            if len(repeticoes) > 1:
+                perda += 0.15 * (len(repeticoes) - 1)
         return perda
 
     def _recalcular_totais_refeicoes(self, refeicoes: Sequence[Mapping]) -> None:
@@ -302,28 +377,36 @@ class DietPlanOptimizer:
 
     def _substituir_alimentos(self, refeicoes: Sequence[Mapping], alvo: Mapping[str, float]) -> None:
         self._otimizar_porcoes(refeicoes, alvo)
-        for _ in range(2):
+        for _ in range(3):
             houve_melhoria = False
             for refeicao in refeicoes:
                 for item in refeicao.get("alimentos", []):
                     opcoes = item.pop("_opcoes", [])
                     atual = dict(item)
-                    melhor = atual
+                    melhor = dict(atual)
                     melhor_perda = self._loss(refeicoes, alvo)
                     for opcao in opcoes:
                         teste = dict(opcao)
-                        teste["quantidade"] = clamp_portion(float(atual["quantidade"]), (
-                            teste["porcao_min"], teste["porcao_padrao"], teste["porcao_max"]
-                        ))
+                        mn, padrao, mx = (
+                            float(teste["porcao_min"]),
+                            float(teste["porcao_padrao"]),
+                            float(teste["porcao_max"]),
+                        )
+                        passo = max(5.0, (mx - mn) / 12.0)
+                        quantidades = {mn, padrao, mx, clamp_portion(atual["quantidade"], (mn, padrao, mx))}
+                        quantidade = mn
+                        while quantidade < mx:
+                            quantidades.add(round(quantidade, 1))
+                            quantidade += passo
                         teste["_slot"] = atual.get("_slot", "")
                         item.clear()
                         item.update(teste)
-                        self._recalcular_totais_refeicoes(refeicoes)
-                        self._otimizar_porcoes(refeicoes, alvo)
-                        perda = self._loss(refeicoes, alvo)
-                        if perda + 1e-10 < melhor_perda:
-                            melhor_perda = perda
-                            melhor = dict(item)
+                        for quantidade in quantidades:
+                            item["quantidade"] = quantidade
+                            perda = self._loss(refeicoes, alvo)
+                            if perda + 1e-10 < melhor_perda:
+                                melhor_perda = perda
+                                melhor = dict(item)
                     item.clear()
                     item.update(melhor)
                     if melhor.get("nome") != atual.get("nome"):
@@ -331,7 +414,7 @@ class DietPlanOptimizer:
                     if opcoes:
                         item["_opcoes"] = opcoes
                     self._recalcular_totais_refeicoes(refeicoes)
-                    self._otimizar_porcoes(refeicoes, alvo)
+            self._otimizar_porcoes(refeicoes, alvo)
             if not houve_melhoria:
                 break
 
@@ -374,6 +457,7 @@ class DietPlanOptimizer:
             for item in refeicao.get("alimentos", []):
                 item.pop("_opcoes", None)
                 item.pop("_slot", None)
+                item.pop("_preferido", None)
         return {"refeicoes": refeicoes, "totais": totais, "score": round(score, 2), "avisos": avisos, "status": status}
 
     def optimize(self):

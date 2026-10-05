@@ -33,7 +33,7 @@ from app import (
     app, get_db, init_db, migrar, seed_alimentos, atualizar_nutri,
     calcular_gramas, calcular_substituicoes, validar_dieta,
     PORCOES_POR_NOME, PORCOES_POR_GRUPO, TOLERANCIAS_DIETA,
-    _faixa_porcao, _totais_item, _tipo_equivalencia_por_grupo,
+    _faixa_porcao, _totais_item, _tipo_equivalencia_por_grupo, DietPlanOptimizer,
     _gerar_dieta_automaticamente,
 )
 
@@ -135,6 +135,60 @@ def test_geracao_diaria_meta_1912_sem_porcoes_irreais():
             and ("Azeite" not in item["nome"] or item["quantidade"] <= 20)
             for refeicao in plano["refeicoes"] for item in refeicao["alimentos"]
         )
+
+
+def test_geracao_rick_escolhe_combinacao_e_equilibra_proteina():
+    """Rick recebe um menu escolhido no catálogo completo e ajustado no total do dia."""
+    with app.app_context():
+        con = get_db()
+        aluno_id = criar_aluno_teste(nome="Rick")
+        metas = {"meta_kcal": 1963, "proteina": 150, "carbo": 218, "gordura": 55}
+        alimentos = [dict(row) for row in con.execute(
+            "SELECT * FROM alimentos WHERE ativo = 1"
+        ).fetchall()]
+        optimizer = DietPlanOptimizer(
+            meta_calorica_diaria=1963,
+            proteina_diaria=150,
+            carboidrato_diario=218,
+            gordura_diaria=55,
+            quantidade_refeicoes=1,
+            estrutura_refeicoes={
+                "Café da manhã": [{
+                    "papel": "proteína",
+                    "candidatos": ["Queijo cottage"],
+                }]
+            },
+            alimentos_ativos=alimentos,
+        )
+        assert len(optimizer._opcoes_por_refeicao("Café da manhã")[0][1]) > 12
+
+        plano = _gerar_dieta_automaticamente(con, aluno_id, metas)
+        assert plano and plano["status"] == "ok"
+        totais_banco = {"kcal": 0.0, "proteinas": 0.0, "carbs": 0.0, "gorduras": 0.0}
+        proteina_por_refeicao = []
+        for refeicao in plano["refeicoes"]:
+            proteina_refeicao = 0.0
+            for item in refeicao["alimentos"]:
+                alimento = con.execute(
+                    "SELECT * FROM alimentos WHERE nome = ?", (item["nome"],)
+                ).fetchone()
+                assert alimento["porcao_min"] <= item["quantidade"] <= alimento["porcao_max"]
+                fator = item["quantidade"] / 100
+                for chave, campo in (
+                    ("kcal", "kcal"), ("proteinas", "proteinas"),
+                    ("carbs", "carbs"), ("gorduras", "gorduras"),
+                ):
+                    macro = float(alimento[campo] or 0) * fator
+                    totais_banco[chave] += macro
+                    if chave == "proteinas":
+                        proteina_refeicao += macro
+            proteina_por_refeicao.append(proteina_refeicao)
+
+        assert abs(totais_banco["kcal"] - 1963) <= 1963 * TOLERANCIAS_DIETA["kcal_pct"] / 100
+        assert abs(totais_banco["proteinas"] - 150) <= TOLERANCIAS_DIETA["proteina"]
+        assert abs(totais_banco["carbs"] - 218) <= TOLERANCIAS_DIETA["carbo"]
+        assert abs(totais_banco["gorduras"] - 55) <= TOLERANCIAS_DIETA["gordura"]
+        assert max(proteina_por_refeicao) - min(proteina_por_refeicao) < 40
 
 
 # =============================================================================
@@ -241,6 +295,35 @@ def test_substituicoes_sempre_tem_quantidade():
                 )
     
     print("✓ Todas as substituições têm quantidade em gramas")
+
+
+def test_substituicao_de_proteina_preserva_proteina_e_nao_so_kcal():
+    """Substituições preservam o macro principal, não apenas as calorias."""
+    with app.app_context():
+        con = get_db()
+        frango = con.execute(
+            "SELECT * FROM alimentos WHERE nome = 'Peito de frango grelhado'"
+        ).fetchone()
+        subs = calcular_substituicoes(dict(frango), 180, "proteina", con)
+        tilapia = next(item for item in subs if item["alimento"] == "Filé de tilápia")
+        proteina_base = frango["proteinas"] * 1.8
+        kcal_base = frango["kcal"] * 1.8
+        assert abs(tilapia["proteinas"] - proteina_base) < 1
+        assert abs(tilapia["kcal"] - kcal_base) > 10
+
+        arroz = con.execute(
+            "SELECT * FROM alimentos WHERE nome = 'Arroz branco cozido'"
+        ).fetchone()
+        subs = calcular_substituicoes(dict(arroz), 180, "amido", con)
+        batata = next(item for item in subs if item["alimento"] == "Batata-doce cozida")
+        assert abs(batata["carbs"] - arroz["carbs"] * 1.8) < 1
+
+        azeite = con.execute(
+            "SELECT * FROM alimentos WHERE nome = 'Azeite de oliva'"
+        ).fetchone()
+        subs = calcular_substituicoes(dict(azeite), 10, "gordura", con)
+        amendoas = next(item for item in subs if item["alimento"] == "Amêndoas")
+        assert abs(amendoas["gorduras"] - azeite["gorduras"] / 10) < 1
 
 
 # =============================================================================
