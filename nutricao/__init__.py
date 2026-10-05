@@ -24,7 +24,11 @@ from .database import (
     desativar_alimento,
 )
 from .tbca import importar_tbca_csv
-from .openfoodfacts import importar_produto, buscar_produtos
+try:
+    from .openfoodfacts import importar_produto, buscar_produtos
+except ModuleNotFoundError:  # pragma: no cover - depende de requests disponível no ambiente
+    importar_produto = None
+    buscar_produtos = None
 from .optimizer import DietPlanOptimizer
 from .scoring import score_dieta, score_refeicao
 from .equivalencias import normalizar_grupo, tipo_equivalencia, filtrar_por_grupo
