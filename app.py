@@ -1862,16 +1862,70 @@ def seed_library_v2():
     con.commit()
 
 
+ALTURA_MIN_CM, ALTURA_MAX_CM = 100, 250
+PESO_MIN_KG, PESO_MAX_KG = 20, 400
+FATOR_MIN, FATOR_MAX = 1.0, 2.5
+
+
+def validar_parametros_plano(a):
+    """Valida os parâmetros obrigatórios do cálculo (Harris-Benedict).
+
+    Devolve (valores, erros). Não inventa valores ausentes nem converte a altura:
+    ``altura_cm`` é sempre tratada em centímetros (a fórmula já espera cm).
+    """
+    erros = []
+
+    idd = idade(a["nascimento"])
+    if idd is None:
+        erros.append("Informe a data de nascimento para calcular a idade.")
+    elif not (10 <= idd <= 120):
+        erros.append("Data de nascimento inválida.")
+
+    altura = num(a["altura_cm"])
+    if altura is None or not (ALTURA_MIN_CM <= altura <= ALTURA_MAX_CM):
+        erros.append("Informe a altura em centímetros. Ex.: 160")
+
+    peso = num(a["peso_atual"])
+    if peso is None or not (PESO_MIN_KG <= peso <= PESO_MAX_KG):
+        erros.append("Informe o peso atual em kg. Ex.: 58,6")
+
+    fator = num(a["fator_atividade"])
+    if fator is None or not (FATOR_MIN <= fator <= FATOR_MAX):
+        erros.append("Selecione o nível de atividade.")
+
+    sexo = (a["sexo_formula"] or "").upper()
+    if sexo not in ("M", "F"):
+        erros.append("Selecione a fórmula (Masculina ou Feminina).")
+
+    return {"idade": idd, "altura": altura, "peso": peso, "fator": fator, "sexo": sexo}, erros
+
+
 def calcular_plano(a):
-    sexo = (a["sexo_formula"] or "M").upper()
-    peso = a["peso_atual"] or 70
-    altura = a["altura_cm"] or 175
-    idd = idade(a["nascimento"]) or 30
+    """Calcula TMB/TDEE/meta por Harris-Benedict.
+
+    Altura em centímetros, peso em kg e idade derivada exclusivamente do
+    nascimento. Se algum parâmetro obrigatório estiver ausente ou inválido,
+    devolve ``valido=False`` com a lista de erros e NENHUM número calculado.
+    """
+    valores, erros = validar_parametros_plano(a)
+    if erros:
+        return {
+            "valido": False, "erros": erros,
+            "sexo": None, "peso": None, "altura": None, "idade": None,
+            "tmb": None, "tdee": None, "meta_kcal": None,
+            "proteina": None, "gordura": None, "carbo": None,
+            "objetivo": None, "ajuste": None, "fator": None,
+        }
+
+    sexo = valores["sexo"]
+    peso = valores["peso"]
+    altura = valores["altura"]  # em centímetros (a fórmula já usa cm)
+    idd = valores["idade"]
     if sexo == "F":
         tmb = 447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * idd)
     else:
         tmb = 88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * idd)
-    fator = a["fator_atividade"] or 1.55
+    fator = valores["fator"]
     tdee = tmb * fator
     obj = a["objetivo_meta"] or "emagrecer"
     ajuste = a["ajuste_meta"]
@@ -1882,6 +1936,7 @@ def calcular_plano(a):
     gordura = meta * 0.25 / 9
     carbo = (meta - proteina * 4 - gordura * 9) / 4
     return {
+        "valido": True, "erros": [],
         "sexo": "Masculina" if sexo == "M" else "Feminina",
         "peso": peso, "altura": altura, "idade": idd,
         "tmb": tmb, "tdee": tdee, "meta_kcal": meta,
@@ -3913,15 +3968,18 @@ def gerar_plano(aluno_id):
     c = calcular_plano(a)
     rot = analisar_rotina(a["rotina"] or "")
     con = get_db()
-    refeicoes = [
-        (nome, hora, frac, round(c["meta_kcal"] * frac))
-        for nome, hora, frac in REFEICOES_MODELO
-    ]
-    if rot and rot["tem_tempos"]:
+    if c["valido"]:
         refeicoes = [
-            (nome, rot["horarios"].get(nome, hora), frac, round(c["meta_kcal"] * frac))
+            (nome, hora, frac, round(c["meta_kcal"] * frac))
             for nome, hora, frac in REFEICOES_MODELO
         ]
+        if rot and rot["tem_tempos"]:
+            refeicoes = [
+                (nome, rot["horarios"].get(nome, hora), frac, round(c["meta_kcal"] * frac))
+                for nome, hora, frac in REFEICOES_MODELO
+            ]
+    else:
+        refeicoes = []
     template = montar_template(a)
     treinos = selecionar_exercicios(con, template)
     semana = semana_para_aluno(a, len(treinos))
@@ -3967,6 +4025,11 @@ def analisar_rotina_aluno(aluno_id):
 def parametros_plano(aluno_id):
     get_aluno_or_404(aluno_id)
     con = get_db()
+
+    nova_altura = num(request.form.get("altura_cm", ""))
+    if nova_altura is not None and not (ALTURA_MIN_CM <= nova_altura <= ALTURA_MAX_CM):
+        flash("Informe a altura em centímetros. Ex.: 160", "error")
+
     con.execute(
         """UPDATE alunos
            SET altura_cm = ?, peso_atual = ?, fator_atividade = ?, objetivo_meta = ?,
@@ -3974,7 +4037,7 @@ def parametros_plano(aluno_id):
                nascimento = ?
            WHERE id = ?""",
         (
-            num(request.form.get("altura_cm", "")),
+            nova_altura,
             num(request.form.get("peso_atual", "")),
             num(request.form.get("fator_atividade", ""), 1.55) or 1.0,
             request.form.get("objetivo_meta", "emagrecer"),
@@ -3988,6 +4051,8 @@ def parametros_plano(aluno_id):
         ),
     )
     con.commit()
+    if nova_altura is not None and not (ALTURA_MIN_CM <= nova_altura <= ALTURA_MAX_CM):
+        return redirect(url_for("gerar_plano", aluno_id=aluno_id))
     flash("Parâmetros atualizados.", "success")
     return redirect(url_for("gerar_plano", aluno_id=aluno_id))
 
@@ -3996,6 +4061,11 @@ def parametros_plano(aluno_id):
 def aplicar_dieta(aluno_id):
     a = get_aluno_or_404(aluno_id)
     c = calcular_plano(a)
+    if not c["valido"]:
+        for e in c["erros"]:
+            flash(e, "error")
+        flash("Não foi possível gerar a dieta: corrija os parâmetros do plano.", "error")
+        return redirect(url_for("gerar_plano", aluno_id=aluno_id))
     con = get_db()
     con.execute("DELETE FROM refeicoes WHERE aluno_id = ?", (aluno_id,))
     con.execute("DELETE FROM metas_dieta WHERE aluno_id = ?", (aluno_id,))

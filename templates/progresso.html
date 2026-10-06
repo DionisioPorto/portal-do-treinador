@@ -67,8 +67,13 @@
   <div class="card stat">
     <div class="stat-icon"><svg class="icon"><use href="#i-flame"/></svg></div>
     <div class="stat-label">Meta diária</div>
+    {% if plano['valido'] %}
     <div class="stat-value">{{ plano['meta_kcal']|int }} <span class="stat-un">kcal</span></div>
     <div class="stat-sub muted">P {{ plano['proteina']|int }} · C {{ plano['carbo']|int }} · G {{ plano['gordura']|int }} g</div>
+    {% else %}
+    <div class="stat-value">—</div>
+    <div class="stat-sub muted">complete os parâmetros do plano</div>
+    {% endif %}
   </div>
 </div>
 

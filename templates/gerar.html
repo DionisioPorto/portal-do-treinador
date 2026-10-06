@@ -36,7 +36,7 @@
     </div>
     <div class="field">
       <label for="p-alt">Altura (cm)</label>
-      <input type="number" step="0.1" id="p-alt" name="altura_cm" value="{{ aluno['altura_cm'] or '' }}" placeholder="175">
+      <input type="number" step="0.1" min="100" max="250" id="p-alt" name="altura_cm" value="{{ aluno['altura_cm'] or '' }}" placeholder="175">
     </div>
     <div class="field">
       <label for="p-peso">Peso atual (kg)</label>
@@ -123,11 +123,16 @@
   {% endif %}
 </section>
 
-{% if not aluno['peso_atual'] or not aluno['altura_cm'] %}
+{% if not c['valido'] %}
 <div class="card empty-state">
   <div class="empty-ico"><svg class="icon"><use href="#i-alert"/></svg></div>
-  <h3>Cadastre altura e peso</h3>
-  <p>Preencha <strong>altura</strong> e <strong>peso atual</strong> acima e clique em “Recalcular plano” para ver o cálculo.</p>
+  <h3>Complete os parâmetros do plano</h3>
+  <p>O cálculo de TMB/TDEE só é feito com dados válidos. Corrija os itens abaixo e clique em “Recalcular plano”:</p>
+  <ul style="text-align:left;margin:8px auto 0;max-width:420px;">
+    {% for e in c['erros'] %}
+    <li>{{ e }}</li>
+    {% endfor %}
+  </ul>
 </div>
 {% else %}
 <div class="cards-grid" style="margin-bottom:0;">
