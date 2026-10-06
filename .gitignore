@@ -1,6 +1,8 @@
 dados.db
 dados.db.bak
 uploads/
+.venv/
+venv/
 __pycache__/
 *.pyc
 tbca-data/
