@@ -1374,27 +1374,11 @@ DISTRIBUICAO_REFEICOES = {
 # Estrutura da montagem automática por refeição: cada item é uma função com
 # candidatos equivalentes; vegetais ficam juntos para evitar duplicidade no prato.
 MONTAGEM_REFEICOES = {
-    "Café da manhã": [
-        ("proteína", ["Iogurte natural", "Iogurte grego", "Queijo cottage", "Ovo cozido"]),
-        ("carboidrato", ["Aveia em flocos", "Granola", "Pão integral", "Tapioca"]),
-        ("fruta", ["Banana", "Maçã", "Pera", "Mamão papaia", "Morango"]),
-    ],
-    "Lanche da manhã": [
-        ("proteína", ["Queijo cottage", "Iogurte natural", "Ovo cozido", "Ricota"]),
-        ("fruta", ["Maçã", "Banana", "Laranja", "Pera", "Morango"]),
-        ("gordura", ["Castanha-do-pará", "Amêndoas", "Nozes", "Pasta de amendoim"]),
-    ],
     "Almoço": [
         ("amido", ["Arroz branco cozido", "Arroz integral cozido", "Macarrão cozido", "Batata inglesa cozida"]),
         ("leguminosa", ["Feijão preto", "Feijão carioca", "Lentilha", "Grão-de-bico"]),
         ("proteína", ["Peito de frango grelhado", "Filé de tilápia", "Bife magro (alcatra)", "Carne moída magra", "Filé mignon", "Lagarto cozido"]),
         ("vegetais", ["Alface", "Rúcula", "Espinafre", "Tomate", "Cenoura", "Brócolis", "Abobrinha"]),
-    ],
-    "Lanche da tarde": [
-        ("carboidrato", ["Pão integral", "Pão francês", "Tapioca", "Torrada integral"]),
-        ("proteína", ["Queijo cottage", "Iogurte grego", "Ricota", "Peito de peru"]),
-        ("fruta", ["Banana", "Maçã", "Pera", "Uva"]),
-        ("gordura", ["Amêndoas", "Castanha-do-pará", "Pasta de amendoim"]),
     ],
     "Jantar": [
         ("amido", ["Batata-doce cozida", "Arroz branco cozido", "Batata inglesa cozida", "Mandioca cozida"]),
@@ -1403,6 +1387,123 @@ MONTAGEM_REFEICOES = {
         ("gordura", ["Azeite de oliva"]),
     ],
 }
+
+# Café da manhã e lanches são combinações fechadas (receitas), não itens
+# sorteados soltos. Isso evita pratos sem sentido como "laranja + pasta de
+# amendoim + iogurte", "pão francês + iogurte grego" ou "ovo + granola".
+# Cada combo é escolhido de forma estável por aluno; o otimizador só ajusta
+# as quantidades dentro dos limites de porção.
+COMBOS_REFEICOES = {
+    "Café da manhã": [
+        {"nome": "Aveia com iogurte e fruta", "slots": [
+            ("proteína", ["Iogurte natural", "Iogurte grego", "Queijo cottage"]),
+            ("carboidrato", ["Aveia em flocos", "Granola"]),
+            ("fruta", ["Banana", "Maçã", "Morango", "Mamão papaia"]),
+        ]},
+        {"nome": "Pão com ovo e fruta", "slots": [
+            ("proteína", ["Ovo cozido"]),
+            ("carboidrato", ["Pão integral"]),
+            ("fruta", ["Maçã", "Banana", "Mamão papaia"]),
+        ]},
+        {"nome": "Tapioca com proteína e fruta", "slots": [
+            ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage", "Ovo cozido"]),
+            ("carboidrato", ["Tapioca"]),
+            ("fruta", ["Banana", "Mamão papaia"]),
+        ]},
+        {"nome": "Pão com proteína e fruta", "slots": [
+            ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage", "Ovo cozido"]),
+            ("carboidrato", ["Pão integral"]),
+            ("fruta", ["Maçã", "Banana", "Mamão papaia"]),
+        ]},
+        {"nome": "Vitamina de banana com aveia", "slots": [
+            ("proteína", ["Leite desnatado", "Iogurte natural", "Iogurte grego"]),
+            ("carboidrato", ["Aveia em flocos"]),
+            ("fruta", ["Banana"]),
+        ]},
+    ],
+    "Lanche da manhã": [
+        {"nome": "Iogurte com fruta e granola", "slots": [
+            ("proteína", ["Iogurte natural", "Iogurte grego"]),
+            ("fruta", ["Banana", "Maçã", "Morango", "Pera"]),
+            ("carboidrato", ["Granola", "Aveia em flocos"]),
+        ]},
+        {"nome": "Pão com queijo e fruta", "slots": [
+            ("carboidrato", ["Pão integral"]),
+            ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage"]),
+            ("fruta", ["Maçã", "Banana", "Pera"]),
+        ]},
+        {"nome": "Tapioca com queijo e mamão", "slots": [
+            ("carboidrato", ["Tapioca"]),
+            ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage"]),
+            ("fruta", ["Mamão papaia"]),
+        ]},
+        {"nome": "Ovo com pão e fruta", "slots": [
+            ("proteína", ["Ovo cozido"]),
+            ("carboidrato", ["Pão integral"]),
+            ("fruta", ["Maçã", "Banana"]),
+        ]},
+        {"nome": "Vitamina de banana com aveia", "slots": [
+            ("proteína", ["Leite desnatado", "Iogurte natural", "Iogurte grego"]),
+            ("fruta", ["Banana"]),
+            ("carboidrato", ["Aveia em flocos"]),
+        ]},
+    ],
+    "Lanche da tarde": [
+        {"nome": "Sanduíche natural de peru", "slots": [
+            ("carboidrato", ["Pão integral", "Pão francês"]),
+            ("proteína", ["Peito de peru"]),
+            ("vegetais", ["Alface", "Tomate"]),
+        ]},
+        {"nome": "Tapioca com queijo e banana", "slots": [
+            ("carboidrato", ["Tapioca"]),
+            ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage"]),
+            ("fruta", ["Banana"]),
+        ]},
+        {"nome": "Iogurte com fruta e granola", "slots": [
+            ("proteína", ["Iogurte grego", "Iogurte natural"]),
+            ("fruta", ["Banana", "Maçã", "Morango"]),
+            ("carboidrato", ["Granola", "Aveia em flocos"]),
+        ]},
+        {"nome": "Ovo com pão e tomate", "slots": [
+            ("proteína", ["Ovo cozido"]),
+            ("carboidrato", ["Pão integral", "Pão francês"]),
+            ("vegetais", ["Tomate", "Alface"]),
+        ]},
+        {"nome": "Atum com torrada e tomate", "slots": [
+            ("proteína", ["Atum em água"]),
+            ("carboidrato", ["Torrada integral"]),
+            ("vegetais", ["Tomate"]),
+        ]},
+    ],
+}
+
+
+def _slots_da_refeicao(nome_refeicao, aluno_id):
+    """Slots de montagem de uma refeição.
+
+    Café da manhã, lanches usam um combo fechado (receita) escolhido por aluno;
+    as demais refeições seguem o modelo aberto de MONTAGEM_REFEICOES.
+    Devolve (slots, nome_do_combo), com slots = [(papel, candidatos, fechado)].
+    """
+    combos = COMBOS_REFEICOES.get(nome_refeicao)
+    if combos:
+        ordem_refeicoes = [nome for nome, _, _ in REFEICOES_MODELO]
+        try:
+            ordem = ordem_refeicoes.index(nome_refeicao)
+        except ValueError:
+            ordem = 0
+        # Offset por refeição evita repetir o mesmo índice em todas as refeições
+        # (ex.: pão no café e pão no lanche da manhã).
+        indice = (int(aluno_id or 0) + ordem) % len(combos)
+        combo = combos[indice]
+        return [
+            (papel, candidatos, True) for papel, candidatos in combo["slots"]
+        ], combo["nome"]
+    slots = [
+        (papel, candidatos, False)
+        for papel, candidatos in MONTAGEM_REFEICOES.get(nome_refeicao, [])
+    ]
+    return slots, None
 
 
 def seed_alimentos():
@@ -3101,18 +3202,23 @@ def _gerar_dieta_automaticamente(con, aluno_id, c):
     estrutura = {}
     alimentos = con.execute("SELECT * FROM alimentos WHERE ativo = 1").fetchall()
     nomes_disponiveis = {str(alimento["nome"]).strip().lower() for alimento in alimentos}
-    for nome, slots in MONTAGEM_REFEICOES.items():
+    for nome, _, _ in REFEICOES_MODELO:
+        slots, _ = _slots_da_refeicao(nome, aluno_id)
         estrutura[nome] = []
-        for papel, candidatos in slots:
+        for papel, candidatos, fechado in slots:
             candidatos_validos = [
                 candidato for candidato in candidatos
                 if candidato.strip().lower() in nomes_disponiveis
             ]
             if not candidatos_validos:
                 continue
-            inicio = aluno_id % len(candidatos_validos)
+            inicio = int(aluno_id or 0) % len(candidatos_validos)
             rotacionados = candidatos_validos[inicio:] + candidatos_validos[:inicio]
-            estrutura[nome].append({"papel": papel, "candidatos": rotacionados})
+            estrutura[nome].append({
+                "papel": papel,
+                "candidatos": rotacionados,
+                "fechado": fechado,
+            })
         if not estrutura[nome]:
             del estrutura[nome]
     if not estrutura:
@@ -3175,12 +3281,14 @@ def _selecionar_alimentos(con, nome_refeicao, aluno_id):
 
     A seleção acontece ANTES de ajustar quantidades: primeiro montamos um almoço
     com proteína + carbo + verdura, depois o solver só dimensiona dentro da faixa.
+    Lanches seguem um combo fechado (receita), garantindo combinações coerentes.
     """
     out = []
-    for _, candidatos in MONTAGEM_REFEICOES.get(nome_refeicao, []):
+    slots, _ = _slots_da_refeicao(nome_refeicao, aluno_id)
+    for _, candidatos, _ in slots:
         if not candidatos:
             continue
-        nome = candidatos[aluno_id % len(candidatos)]
+        nome = candidatos[int(aluno_id or 0) % len(candidatos)]
         if con.execute("SELECT 1 FROM alimentos WHERE nome = ?", (nome,)).fetchone():
             out.append(nome)
     return out

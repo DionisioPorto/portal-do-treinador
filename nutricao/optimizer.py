@@ -47,6 +47,8 @@ PROTEINAS_CARNE_PEIXE = {
     "frango", "carne", "tilapia", "merluza", "salmao", "atum", "peixe",
     "alcatra", "lagarto", "sobrecoxa", "peru",
 }
+# Proteínas magras aceitáveis em lanches (sanduíche natural, atum, etc.).
+PROTEINAS_LANCHE = {"peru", "atum", "frango", "whey"}
 PESOS_MACROS = {"proteinas": 3.0, "kcal": 6.0, "carbs": 1.5, "gorduras": 1.5}
 DISTRIBUICAO_PROTEINA_REFEICOES = {
     "Café da manhã": 0.20,
@@ -162,6 +164,7 @@ class DietPlanOptimizer:
                 papel_original = str(slot.get("papel") or slot.get("grupo") or "").lower()
                 papel = normalizar_grupo(papel_original.translate(str.maketrans("áéíóúãõç", "aeiouaoc")))
                 permitidos = GRUPOS_POR_PAPEL.get(papel)
+                fechado = bool(slot.get("fechado"))
                 nomes_preferidos = {
                     nome.strip().lower()
                     for nome in slot.get("candidatos", [])
@@ -178,7 +181,7 @@ class DietPlanOptimizer:
                         for candidato in encontrados:
                             candidato["_preferido"] = True
                             pool.append(candidato)
-                if permitidos:
+                if permitidos and not fechado:
                     grupos_candidatos = self.alimentos_ativos or self.alimentos_disponiveis or self.dados_nutricionais
                     for candidato in grupos_candidatos:
                         grupo = normalizar_grupo(
@@ -229,7 +232,9 @@ class DietPlanOptimizer:
                 )
                 deduplicados = self._deduplicar_alimentos(pool)
                 for candidato in deduplicados:
-                    candidato["_opcional"] = self._slot_opcional(nome_refeicao, papel)
+                    candidato["_opcional"] = (
+                        False if fechado else self._slot_opcional(nome_refeicao, papel)
+                    )
                 opcoes.append((papel, deduplicados))
             return [(papel, pool) for papel, pool in opcoes if pool]
 
@@ -287,7 +292,11 @@ class DietPlanOptimizer:
         if refeicao == "cafe da manha":
             return eh_laticinio or eh_ovo
         if refeicao.startswith("lanche"):
-            return eh_laticinio or eh_ovo
+            return (
+                eh_laticinio
+                or eh_ovo
+                or self._contem_termo(nome, PROTEINAS_LANCHE)
+            )
         if refeicao == "almoco":
             return grupo == "proteina" and (eh_carne_peixe or eh_ovo)
         if refeicao == "jantar":

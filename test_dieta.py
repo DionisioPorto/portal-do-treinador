@@ -34,7 +34,7 @@ from app import (
     calcular_gramas, calcular_substituicoes, validar_dieta,
     PORCOES_POR_NOME, PORCOES_POR_GRUPO, TOLERANCIAS_DIETA,
     _faixa_porcao, _totais_item, _tipo_equivalencia_por_grupo, DietPlanOptimizer,
-    _gerar_dieta_automaticamente,
+    _gerar_dieta_automaticamente, COMBOS_REFEICOES,
 )
 
 
@@ -633,6 +633,54 @@ def test_recalcular_dieta_apos_alterar_limites():
         con.commit()
     
     print("✓ Sistema recalcula dieta após alterar limites")
+
+
+# =============================================================================
+# TESTE 9: Café e lanches usam combinações coerentes (receitas fechadas)
+# =============================================================================
+def test_cafe_e_lanches_usam_combos_coerentes():
+    """Cada café/lanche gerado precisa ser um dos combos fechados definidos.
+
+    Isso impede regressões como "pão + iogurte" ou "laranja + pasta de amendoim"
+    e garante que o otimizador não misture itens de receitas diferentes.
+    """
+    with app.app_context():
+        con = get_db()
+        metas = {"meta_kcal": 1912, "proteina": 150, "carbo": 208, "gordura": 53}
+        for indice in range(5):
+            aluno_id = criar_aluno_teste(nome=f"Aluno Combo {indice}")
+            plano = _gerar_dieta_automaticamente(con, aluno_id, metas)
+            assert plano and plano["status"] == "ok"
+            for refeicao in plano["refeicoes"]:
+                nome_refeicao = refeicao["nome"]
+                if nome_refeicao not in COMBOS_REFEICOES:
+                    continue
+                nomes = {item["nome"] for item in refeicao["alimentos"]}
+                combos = COMBOS_REFEICOES[nome_refeicao]
+                permitidos = [
+                    {
+                        candidato
+                        for _, candidatos in combo["slots"]
+                        for candidato in candidatos
+                    }
+                    for combo in combos
+                ]
+                assert any(nomes <= permitido for permitido in permitidos), (
+                    f"{nome_refeicao} gerou combinação fora dos combos: {sorted(nomes)}"
+                )
+                # Trava explícita para as misturas que motivaram a mudança.
+                assert not (
+                    any("pão" in nome.casefold() for nome in nomes)
+                    and any("iogurte" in nome.casefold() for nome in nomes)
+                ), f"{nome_refeicao} misturou pão com iogurte: {sorted(nomes)}"
+                assert not (
+                    any(
+                        termo in nome.casefold()
+                        for nome in nomes
+                        for termo in ("laranja", "tangerina", "limão")
+                    )
+                    and any("pasta de amendoim" in nome.casefold() for nome in nomes)
+                ), f"{nome_refeicao} misturou fruta cítrica com pasta de amendoim"
 
 
 if __name__ == "__main__":
