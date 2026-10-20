@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Histórico{% if aluno %} · {{ aluno['nome'] }}{% endif %} · Portal{% endblock %}
+{% block content %}
+{% if aluno %}{% include "_aluno_cabecalho.html" %}{% endif %}
+
+<div class="page-head">
+  <div class="head-title">
+    <span class="page-title-ico"><svg class="icon"><use href="#i-clock"/></svg></span>
+    <div>
+      <h1>Histórico de planos</h1>
+      <div class="sub">
+        Cada PDF de treino ou dieta gerado fica salvo aqui{% if aluno %} para {{ aluno['nome'] }}{% endif %},
+        com data e a versão exata do dia.
+      </div>
+    </div>
+  </div>
+  {% if aluno %}
+  <div class="head-actions">
+    <a class="btn ghost" href="{{ url_for('imprimir_treino', aluno_id=aluno['id']) }}" target="_blank">
+      <svg class="icon"><use href="#i-printer"/></svg>Gerar PDF do treino atual
+    </a>
+    <a class="btn ghost" href="{{ url_for('imprimir_dieta', aluno_id=aluno['id']) }}" target="_blank">
+      <svg class="icon"><use href="#i-printer"/></svg>Gerar PDF da dieta atual
+    </a>
+  </div>
+  {% else %}
+  <form method="get" class="head-actions" style="align-items:flex-end;">
+    <div class="field" style="margin:0;min-width:200px;">
+      <label for="h-aluno">Aluno</label>
+      <select id="h-aluno" name="aluno">
+        <option value="">Todos os alunos</option>
+        {% for a in alunos %}
+        <option value="{{ a['id'] }}" {{ 'selected' if aluno_filtro == a['id'] }}>{{ a['nome'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="margin:0;min-width:150px;">
+      <label for="h-tipo">Tipo</label>
+      <select id="h-tipo" name="tipo">
+        <option value="">Treino e dieta</option>
+        {% for k, v in TIPOS_HISTORICO.items() %}
+        <option value="{{ k }}" {{ 'selected' if tipo == k }}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn ghost">
+      <svg class="icon"><use href="#i-search"/></svg>Filtrar
+    </button>
+    <a class="btn ghost" href="{{ url_for('historico') }}">Limpar</a>
+  </form>
+  {% endif %}
+</div>
+
+<div class="chips-row" style="margin-bottom:12px;">
+  <span class="chip">Treinos: <strong>{{ totais['treino'] }}</strong></span>
+  <span class="chip accent">Dietas: <strong>{{ totais['dieta'] }}</strong></span>
+</div>
+
+<p class="count-line">
+  {{ registros | length }} versão(ões) exibida(s)
+  {%- if registros | length >= 300 %} · mostrando as 300 mais recentes{% endif %}
+</p>
+
+<section class="card" style="margin-top:14px;">
+  <div class="table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          {% if not aluno %}<th>Aluno</th>{% endif %}
+          <th>Tipo</th>
+          <th>Resumo</th>
+          <th class="actions-cell">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr>
+          <td class="strong">{{ formatar_data_hora(r['criado_em']) }}</td>
+          {% if not aluno %}
+          <td>
+            <a href="{{ url_for('historico_aluno', aluno_id=r['aluno_id']) }}">{{ r['aluno_nome'] }}</a>
+          </td>
+          {% endif %}
+          <td>
+            <span class="chip {{ 'accent' if r['tipo'] == 'dieta' }}">
+              <svg class="icon"><use href="{{ '#i-utensils' if r['tipo'] == 'dieta' else '#i-dumbbell' }}"/></svg>
+              {{ TIPOS_HISTORICO.get(r['tipo'], r['tipo']) }}
+            </span>
+          </td>
+          <td>{{ r['resumo'] or r['titulo'] }}</td>
+          <td class="actions-cell">
+            <a class="btn ghost small" href="{{ url_for('historico_detalhe', hist_id=r['id']) }}" target="_blank">
+              <svg class="icon"><use href="#i-printer"/></svg>Abrir / PDF
+            </a>
+            <form method="post" action="{{ url_for('excluir_historico', hist_id=r['id']) }}"
+                  class="confirmar inline" data-confirm="Remover esta versão do histórico?">
+              <input type="hidden" name="voltar" value="{{ voltar_url }}">
+              <button type="submit" class="btn ghost danger small" title="Remover do histórico">
+                <svg class="icon"><use href="#i-trash"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{{ 4 if aluno else 5 }}" class="empty">
+            Nenhuma versão salva ainda. Abra <strong>Imprimir / PDF</strong> no treino ou na dieta
+            para criar a primeira.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

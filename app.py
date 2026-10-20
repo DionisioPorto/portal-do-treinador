@@ -1,10 +1,12 @@
 import os
 import sqlite3
 import datetime
+import hashlib
 import re
 from pathlib import Path
 
 from flask import Flask, g, render_template, request, redirect, url_for, abort, flash, send_from_directory, session
+from markupsafe import escape
 
 from nutricao.optimizer import DietPlanOptimizer
 from nutricao.substitutions import calcular_substituicoes as calcular_substituicoes_por_macro
@@ -219,6 +221,20 @@ CREATE TABLE IF NOT EXISTS avaliacoes (
     observacoes TEXT,
     criado_em TEXT DEFAULT (datetime('now','localtime'))
 );
+
+CREATE TABLE IF NOT EXISTS historico_planos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    aluno_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    titulo TEXT NOT NULL,
+    resumo TEXT,
+    hash TEXT NOT NULL,
+    conteudo TEXT NOT NULL,
+    criado_em TEXT DEFAULT (datetime('now','localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_historico_aluno
+    ON historico_planos (aluno_id, tipo, criado_em);
 """
 
 
@@ -278,6 +294,15 @@ def formatar_data(d):
         return "—"
     try:
         return datetime.datetime.strptime(d, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except Exception:
+        return d
+
+
+def formatar_data_hora(d):
+    if not d:
+        return "—"
+    try:
+        return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y às %H:%M")
     except Exception:
         return d
 
@@ -2195,6 +2220,33 @@ def get_aluno_or_404(aluno_id):
     return a
 
 
+TIPOS_HISTORICO = {"treino": "Treino", "dieta": "Dieta"}
+
+
+def registrar_historico_plano(aluno_id, tipo, titulo, resumo, html):
+    """Guarda uma versão do PDF gerado (treino ou dieta).
+
+    Só cria uma nova versão quando o conteúdo muda em relação à última
+    salva para o mesmo aluno e tipo — reabrir/atualizar a impressão não
+    gera duplicatas. Devolve o id criado ou None quando nada mudou.
+    """
+    con = get_db()
+    h = hashlib.sha256(html.encode("utf-8")).hexdigest()
+    ultima = con.execute(
+        "SELECT hash FROM historico_planos WHERE aluno_id = ? AND tipo = ? ORDER BY id DESC LIMIT 1",
+        (aluno_id, tipo),
+    ).fetchone()
+    if ultima and ultima["hash"] == h:
+        return None
+    cur = con.execute(
+        "INSERT INTO historico_planos (aluno_id, tipo, titulo, resumo, hash, conteudo) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (aluno_id, tipo, titulo, resumo, h, html),
+    )
+    con.commit()
+    return cur.lastrowid
+
+
 @app.context_processor
 def inject_helpers():
     return dict(
@@ -2202,6 +2254,7 @@ def inject_helpers():
         mes_atual=mes_atual,
         brl=brl,
         formatar_data=formatar_data,
+        formatar_data_hora=formatar_data_hora,
         iniciais=iniciais,
         idade=idade,
         OBJETIVOS_META=OBJETIVOS_META,
@@ -2219,6 +2272,7 @@ def inject_helpers():
         EQUIPAMENTOS_LISTA=EQUIPAMENTOS_LISTA,
         OBJETIVOS_TREINO=OBJETIVOS_TREINO,
         PADROES_MOVIMENTO=PADROES_MOVIMENTO,
+        TIPOS_HISTORICO=TIPOS_HISTORICO,
         hoje=datetime.date.today().isoformat(),
     )
 
@@ -3758,6 +3812,101 @@ def imprimir_relatorio():
     return render_template("imprimir_relatorio.html", **dados)
 
 
+def _render_historico(aluno):
+    con = get_db()
+    tipo = request.args.get("tipo", "").strip()
+    if tipo not in TIPOS_HISTORICO:
+        tipo = ""
+    aluno_filtro = aluno["id"] if aluno else request.args.get("aluno", type=int)
+
+    condicoes, params = [], []
+    if aluno_filtro:
+        condicoes.append("h.aluno_id = ?")
+        params.append(aluno_filtro)
+    if tipo:
+        condicoes.append("h.tipo = ?")
+        params.append(tipo)
+    sql = (
+        "SELECT h.id, h.aluno_id, h.tipo, h.titulo, h.resumo, h.criado_em, "
+        "a.nome AS aluno_nome FROM historico_planos h "
+        "JOIN alunos a ON a.id = h.aluno_id"
+    )
+    if condicoes:
+        sql += " WHERE " + " AND ".join(condicoes)
+    sql += " ORDER BY h.criado_em DESC, h.id DESC LIMIT 300"
+    registros = con.execute(sql, params).fetchall()
+
+    # Contagem por tipo (respeitando o aluno filtrado) para os chips de resumo.
+    totais = {chave: 0 for chave in TIPOS_HISTORICO}
+    sql_t = "SELECT tipo, COUNT(*) AS n FROM historico_planos"
+    params_t = []
+    if aluno_filtro:
+        sql_t += " WHERE aluno_id = ?"
+        params_t.append(aluno_filtro)
+    sql_t += " GROUP BY tipo"
+    for linha in con.execute(sql_t, params_t).fetchall():
+        if linha["tipo"] in totais:
+            totais[linha["tipo"]] = linha["n"]
+
+    alunos = con.execute("SELECT id, nome FROM alunos ORDER BY nome").fetchall()
+    voltar_url = request.full_path if request.query_string else request.path
+    return render_template(
+        "historico.html", active="historico", aba="historico", aluno=aluno,
+        registros=registros, alunos=alunos, tipo=tipo,
+        aluno_filtro=aluno_filtro, totais=totais, voltar_url=voltar_url,
+    )
+
+
+@app.route("/historico")
+def historico():
+    return _render_historico(None)
+
+
+@app.route("/aluno/<int:aluno_id>/historico")
+def historico_aluno(aluno_id):
+    return _render_historico(get_aluno_or_404(aluno_id))
+
+
+@app.route("/historico/<int:hist_id>")
+def historico_detalhe(hist_id):
+    """Serve a versão EXATA do plano salva no histórico (reimpressão fiel)."""
+    con = get_db()
+    h = con.execute(
+        "SELECT h.*, a.nome AS aluno_nome FROM historico_planos h "
+        "JOIN alunos a ON a.id = h.aluno_id WHERE h.id = ?",
+        (hist_id,),
+    ).fetchone()
+    if h is None:
+        abort(404)
+    html = h["conteudo"]
+    banner = (
+        '<div class="no-print" style="position:sticky;top:0;z-index:9;padding:10px 16px;'
+        'background:#0d1119;border-bottom:1px solid #26324a;font-size:13px;color:#c8d2e0;'
+        'display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;">'
+        f'<span>Versão salva em <strong>{formatar_data_hora(h["criado_em"])}</strong> · '
+        f'{escape(h["aluno_nome"])} · {TIPOS_HISTORICO.get(h["tipo"], h["tipo"])}</span>'
+        f'<a href="{url_for("historico_aluno", aluno_id=h["aluno_id"])}" '
+        'style="color:#58a6ff;text-decoration:none;font-weight:600;">Voltar ao histórico</a>'
+        "</div>"
+    )
+    pos = html.find(">", html.find("<body"))
+    if pos != -1:
+        html = html[: pos + 1] + banner + html[pos + 1:]
+    return html
+
+
+@app.route("/historico/<int:hist_id>/excluir", methods=["POST"])
+def excluir_historico(hist_id):
+    con = get_db()
+    con.execute("DELETE FROM historico_planos WHERE id = ?", (hist_id,))
+    con.commit()
+    flash("Versão removida do histórico.", "info")
+    voltar = request.form.get("voltar", "")
+    if not voltar.startswith("/") or voltar.startswith("//"):
+        voltar = url_for("historico")
+    return redirect(voltar)
+
+
 @app.route("/financeiro/despesa/novo", methods=["POST"])
 def nova_despesa():
     con = get_db()
@@ -3878,12 +4027,20 @@ def imprimir_treino(aluno_id):
         exercicios[t["id"]] = con.execute(
             "SELECT * FROM exercicios WHERE treino_id = ? ORDER BY ordem, id", (t["id"],)
         ).fetchall()
-    return render_template(
+    html = render_template(
         "imprimir_treino.html", aluno=a, treinos=treinos, exercicios=exercicios
     )
+    total_exercicios = sum(len(itens) for itens in exercicios.values())
+    registrar_historico_plano(
+        aluno_id,
+        "treino",
+        "Plano de treino",
+        f"{len(treinos)} treino(s) · {total_exercicios} exercício(s)",
+        html,
+    )
+    return html
 
 
-@app.route("/aluno/<int:aluno_id>/dieta/imprimir")
 def validar_dieta(aluno_id):
     """Valida a dieta salva antes do PDF: porções dentro das faixas, totais
     reais próximos das metas diárias e substituições com gramas.
@@ -3936,6 +4093,7 @@ def validar_dieta(aluno_id):
     return avisos, reais, alvo
 
 
+@app.route("/aluno/<int:aluno_id>/dieta/imprimir")
 @app.route("/aluno/<int:aluno_id>/imprimir-dieta")
 def imprimir_dieta(aluno_id):
     a = get_aluno_or_404(aluno_id)
@@ -3952,14 +4110,19 @@ def imprimir_dieta(aluno_id):
     }
     alim = montar_alimentos(con, refeicoes)
     avisos, reais, alvo = validar_dieta(aluno_id)
-    if avisos:
-        flash("Dieta com ajustes sugeridos antes da impressão:", "warn")
-        for av in avisos:
-            flash(av, "warn")
-    return render_template(
+    html = render_template(
         "imprimir_dieta.html", aluno=a, metas=metas, refeicoes=refeicoes,
         totais=totais, alim=alim, avisos=avisos, reais=reais, alvo=alvo,
     )
+    kcal = (metas["kcal_diaria"] if metas else 0) or totais["calorias"] or 0
+    registrar_historico_plano(
+        aluno_id,
+        "dieta",
+        "Plano alimentar",
+        f"{len(refeicoes)} refeição(ões) · {round(kcal)} kcal",
+        html,
+    )
+    return html
 
 
 @app.route("/aluno/<int:aluno_id>/gerar")

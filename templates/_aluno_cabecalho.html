@@ -44,6 +44,9 @@
   <a href="{{ url_for('acompanhamento', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'acompanhamento' }}">
     <svg class="icon"><use href="#i-activity"/></svg>Acompanhamento
   </a>
+  <a href="{{ url_for('historico_aluno', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'historico' }}">
+    <svg class="icon"><use href="#i-clock"/></svg>Histórico
+  </a>
   <a href="{{ url_for('financeiro_aluno', aluno_id=aluno['id']) }}" class="{{ 'active' if aba == 'financeiro' }}">
     <svg class="icon"><use href="#i-dollar"/></svg>Financeiro
   </a>

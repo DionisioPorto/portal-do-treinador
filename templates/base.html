@@ -105,6 +105,9 @@
     <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
     </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
   </svg>
 
   <div class="app-shell">
@@ -127,6 +130,9 @@
         </a>
         <a href="{{ url_for('relatorios') }}" class="{{ 'active' if active == 'relatorios' }}">
           <svg class="icon"><use href="#i-activity"/></svg><span>Relatórios</span>
+        </a>
+        <a href="{{ url_for('historico') }}" class="{{ 'active' if active == 'historico' }}">
+          <svg class="icon"><use href="#i-clock"/></svg><span>Histórico</span>
         </a>
       </nav>
 
@@ -169,6 +175,9 @@
       </a>
       <a href="{{ url_for('relatorios') }}" class="{{ 'active' if active == 'relatorios' }}">
         <svg class="icon"><use href="#i-activity"/></svg><span>Relatórios</span>
+      </a>
+      <a href="{{ url_for('historico') }}" class="{{ 'active' if active == 'historico' }}">
+        <svg class="icon"><use href="#i-clock"/></svg><span>Histórico</span>
       </a>
     </nav>
   </div>
