@@ -34,7 +34,7 @@ from app import (
     calcular_gramas, calcular_substituicoes, validar_dieta,
     PORCOES_POR_NOME, PORCOES_POR_GRUPO, TOLERANCIAS_DIETA,
     _faixa_porcao, _totais_item, _tipo_equivalencia_por_grupo, DietPlanOptimizer,
-    _gerar_dieta_automaticamente, COMBOS_REFEICOES,
+    _gerar_dieta_automaticamente, COMBOS_REFEICOES, descrever_refeicao,
 )
 
 
@@ -681,6 +681,74 @@ def test_cafe_e_lanches_usam_combos_coerentes():
                     )
                     and any("pasta de amendoim" in nome.casefold() for nome in nomes)
                 ), f"{nome_refeicao} misturou fruta cítrica com pasta de amendoim"
+
+
+# =============================================================================
+# TESTE 10: Descrição/preparo de cada refeição
+# =============================================================================
+def test_descricao_das_refeicoes():
+    """Cada refeição vira um prato legível, com o preparo no nome do alimento."""
+
+    def itens(*pares):
+        return [{"nome": nome, "grupo": grupo} for nome, grupo in pares]
+
+    assert descrever_refeicao("Almoço", itens(
+        ("Arroz integral cozido", "amido"),
+        ("Feijão preto", "leguminosa"),
+        ("Bife magro (alcatra)", "proteina"),
+        ("Alface", "verdura_folha"),
+    )) == "Arroz integral com feijão preto, bife grelhado e salada de alface"
+
+    assert descrever_refeicao("Almoço", itens(
+        ("Batata inglesa cozida", "amido"),
+        ("Lagarto cozido", "proteina"),
+        ("Cenoura", "legume"),
+    )) == "Batata, lagarto cozido e cenoura cozida"
+
+    assert descrever_refeicao("Jantar", itens(
+        ("Mandioca cozida", "amido"),
+        ("Filé de merluza", "proteina"),
+        ("Abobrinha", "legume"),
+        ("Azeite de oliva", "gordura"),
+    )) == "Mandioca com merluza grelhada e abobrinha refogada, regado com azeite de oliva"
+
+    assert descrever_refeicao("Café da manhã", itens(
+        ("Pão integral", "pao"),
+        ("Ovo cozido", "proteina"),
+        ("Mamão papaia", "fruta"),
+    )) == "Pão integral com ovo cozido e mamão"
+
+    assert descrever_refeicao("Café da manhã", itens(
+        ("Aveia em flocos", "cereal"),
+        ("Leite desnatado", "laticinio"),
+        ("Banana", "fruta"),
+    )) == "Vitamina de banana com aveia"
+
+    assert descrever_refeicao("Lanche da manhã", itens(
+        ("Iogurte grego", "laticinio"),
+        ("Banana", "fruta"),
+        ("Aveia em flocos", "cereal"),
+    )) == "Iogurte grego com banana e aveia"
+
+    assert descrever_refeicao("Lanche da tarde", itens(
+        ("Torrada integral", "pao"),
+        ("Atum em água", "proteina"),
+        ("Tomate", "legume"),
+    )) == "Torrada com atum e tomate"
+
+
+def test_plano_gerado_tem_descricao_em_todas_refeicoes():
+    """O motor precisa devolver descrição/preparo em cada refeição."""
+    with app.app_context():
+        con = get_db()
+        metas = {"meta_kcal": 1912, "proteina": 150, "carbo": 208, "gordura": 53}
+        aluno_id = criar_aluno_teste(nome="Aluno Descrição")
+        plano = _gerar_dieta_automaticamente(con, aluno_id, metas)
+        assert plano and len(plano["refeicoes"]) == 5
+        for refeicao in plano["refeicoes"]:
+            descricao = (refeicao.get("descricao") or "").strip()
+            assert descricao, f"{refeicao['nome']} ficou sem descrição"
+            assert descricao[0].isupper(), f"descrição não começa com maiúscula: {descricao}"
 
 
 if __name__ == "__main__":

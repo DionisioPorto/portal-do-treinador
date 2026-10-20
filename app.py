@@ -1405,10 +1405,10 @@ COMBOS_REFEICOES = {
             ("carboidrato", ["Pão integral"]),
             ("fruta", ["Maçã", "Banana", "Mamão papaia"]),
         ]},
-        {"nome": "Tapioca com proteína e fruta", "slots": [
-            ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage", "Ovo cozido"]),
+        {"nome": "Tapioca com queijo e fruta", "slots": [
+            ("proteína", ["Queijo minas frescal", "Ovo cozido"]),
             ("carboidrato", ["Tapioca"]),
-            ("fruta", ["Banana", "Mamão papaia"]),
+            ("fruta", ["Banana", "Maçã"]),
         ]},
         {"nome": "Pão com proteína e fruta", "slots": [
             ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage", "Ovo cozido"]),
@@ -1432,10 +1432,10 @@ COMBOS_REFEICOES = {
             ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage"]),
             ("fruta", ["Maçã", "Banana", "Pera"]),
         ]},
-        {"nome": "Tapioca com queijo e mamão", "slots": [
-            ("carboidrato", ["Tapioca"]),
-            ("proteína", ["Queijo minas frescal", "Ricota", "Queijo cottage"]),
-            ("fruta", ["Mamão papaia"]),
+        {"nome": "Torrada com cottage e fruta", "slots": [
+            ("carboidrato", ["Torrada integral"]),
+            ("proteína", ["Queijo cottage", "Ricota"]),
+            ("fruta", ["Maçã", "Banana", "Morango"]),
         ]},
         {"nome": "Ovo com pão e fruta", "slots": [
             ("proteína", ["Ovo cozido"]),
@@ -1504,6 +1504,206 @@ def _slots_da_refeicao(nome_refeicao, aluno_id):
         for papel, candidatos in MONTAGEM_REFEICOES.get(nome_refeicao, [])
     ]
     return slots, None
+
+
+# Como cada alimento aparece num prato real (descrição usada no plano e no PDF).
+_DESCRICAO_PREPARO = {
+    # Proteínas
+    "Ovo cozido": "ovo cozido",
+    "Omelete": "omelete",
+    "Bife magro (alcatra)": "bife grelhado",
+    "Filé mignon": "filé mignon grelhado",
+    "Lagarto cozido": "lagarto cozido",
+    "Carne moída magra": "carne moída",
+    "Sobrecoxa sem pele": "sobrecoxa sem pele",
+    "Peito de frango grelhado": "frango grelhado",
+    "Peito de peru": "peito de peru",
+    "Filé de tilápia": "tilápia grelhada",
+    "Filé de merluza": "merluza grelhada",
+    "Salmão grelhado": "salmão grelhado",
+    "Atum em água": "atum",
+    "Tofu": "tofu grelhado",
+    # Verduras e legumes
+    "Alface": "salada de alface",
+    "Rúcula": "salada de rúcula",
+    "Espinafre": "espinafre refogado",
+    "Couve": "couve refogada",
+    "Agrião": "salada de agrião",
+    "Escarola": "salada de escarola",
+    "Brócolis": "brócolis no vapor",
+    "Couve-flor": "couve-flor no vapor",
+    "Abobrinha": "abobrinha refogada",
+    "Chuchu": "chuchu refogado",
+    "Cenoura": "cenoura cozida",
+    "Beterraba": "beterraba cozida",
+    "Vagem": "vagem no vapor",
+    "Pepino": "pepino em rodelas",
+    "Tomate": "tomate",
+    # Carboidratos
+    "Arroz branco cozido": "arroz",
+    "Arroz integral cozido": "arroz integral",
+    "Batata inglesa cozida": "batata",
+    "Batata-doce cozida": "batata-doce",
+    "Mandioca cozida": "mandioca",
+    "Inhame cozido": "inhame",
+    "Cará cozido": "cará",
+    "Macarrão cozido": "macarrão",
+    "Polenta": "polenta",
+    "Pão francês": "pão francês",
+    "Pão integral": "pão integral",
+    "Pão de forma": "pão de forma",
+    "Torrada integral": "torrada",
+    "Panqueca integral": "panqueca",
+    "Tapioca": "tapioca",
+    "Aveia em flocos": "aveia",
+    "Granola": "granola",
+    "Cereal integral": "cereal integral",
+    "Farinha de mandioca": "farinha de mandioca",
+    "Feijão carioca": "feijão",
+    "Feijão preto": "feijão preto",
+    "Lentilha": "lentilha",
+    "Grão-de-bico": "grão-de-bico",
+    "Ervilha": "ervilha",
+    # Frutas
+    "Banana": "banana",
+    "Maçã": "maçã",
+    "Pera": "pera",
+    "Mamão papaia": "mamão",
+    "Melancia": "melancia",
+    "Melão": "melão",
+    "Abacaxi": "abacaxi",
+    "Laranja": "laranja",
+    "Tangerina": "tangerina",
+    "Morango": "morango",
+    "Uva": "uva",
+    # Laticínios
+    "Leite desnatado": "leite desnatado",
+    "Iogurte natural": "iogurte natural",
+    "Iogurte grego": "iogurte grego",
+    "Queijo cottage": "queijo cottage",
+    "Ricota": "ricota",
+    "Queijo minas frescal": "queijo minas",
+    "Muçarela (moderado)": "muçarela",
+    # Gorduras
+    "Azeite de oliva": "azeite de oliva",
+    "Abacate": "abacate",
+    "Castanha-do-pará": "castanha-do-pará",
+    "Amêndoas": "amêndoas",
+    "Nozes": "nozes",
+    "Pasta de amendoim": "pasta de amendoim",
+    "Manteiga (moderado)": "manteiga",
+    "Mel": "mel",
+}
+
+_GRUPOS_CARBO_DESCRICAO = {"amido", "pao", "cereal"}
+
+
+def _grupo_do_item(item):
+    return str(
+        item.get("grupo") or item.get("grupo_equiv") or item.get("categoria") or ""
+    ).strip().lower()
+
+
+def _frag_dieta(nome):
+    nome = str(nome or "").strip()
+    return _DESCRICAO_PREPARO.get(nome, nome.lower())
+
+
+def _juntar_dieta(partes):
+    partes = [p for p in partes if p]
+    if not partes:
+        return ""
+    if len(partes) == 1:
+        return partes[0]
+    if len(partes) == 2:
+        return f"{partes[0]} e {partes[1]}"
+    return ", ".join(partes[:-1]) + " e " + partes[-1]
+
+
+def _capitalizar_dieta(texto):
+    return texto[:1].upper() + texto[1:] if texto else texto
+
+
+def descrever_refeicao(nome_refeicao, itens):
+    """Descreve a refeição como um prato real (com preparo), ex.:
+
+    "Arroz integral com feijão, bife grelhado e salada de alface".
+    """
+    itens = [i for i in (itens or []) if str(i.get("nome") or "").strip()]
+    if not itens:
+        return ""
+
+    def frags(predicado):
+        return [_frag_dieta(i.get("nome")) for i in itens if predicado(i)]
+
+    amidos = frags(lambda i: _grupo_do_item(i) in _GRUPOS_CARBO_DESCRICAO)
+    leguminosas = frags(lambda i: _grupo_do_item(i) == "leguminosa")
+    proteinas = frags(lambda i: _grupo_do_item(i) in {"proteina", "laticinio"})
+    frutas = frags(lambda i: _grupo_do_item(i) == "fruta")
+    vegetais = frags(lambda i: _grupo_do_item(i) in {"legume", "verdura_folha"})
+    gorduras = frags(lambda i: _grupo_do_item(i) == "gordura")
+
+    nome = str(nome_refeicao or "")
+    base = amidos[0] if amidos else ""
+    proteina = proteinas[0] if proteinas else ""
+
+    if nome == "Almoço":
+        partes = []
+        if base and leguminosas:
+            partes.append(f"{base} com {leguminosas[0]}")
+        elif base:
+            partes.append(base)
+        if proteina:
+            partes.append(proteina)
+        if vegetais:
+            partes.append(_juntar_dieta(vegetais))
+        return _capitalizar_dieta(_juntar_dieta(partes))
+
+    if nome == "Jantar":
+        partes = []
+        if base and proteina:
+            partes.append(f"{base} com {proteina}")
+        elif base:
+            partes.append(base)
+        if vegetais:
+            partes.append(_juntar_dieta(vegetais))
+        texto = _juntar_dieta(partes)
+        if gorduras:
+            gordura = gorduras[0]
+            conector = "regado com" if "azeite" in gordura else "com"
+            texto = f"{texto}, {conector} {gordura}" if texto else gordura
+        return _capitalizar_dieta(texto)
+
+    # Café da manhã e lanches: descreve a refeição como prato.
+    cereais = frags(lambda i: _grupo_do_item(i) == "cereal")
+    paes = frags(lambda i: _grupo_do_item(i) in {"pao", "amido"})
+    if (
+        "banana" in frutas
+        and any("aveia" in c for c in cereais)
+        and any("leite" in p for p in proteinas)
+    ):
+        return "Vitamina de banana com aveia"
+    if proteinas and cereais and any(
+        "iogurte" in p or "cottage" in p or "ricota" in p for p in proteinas
+    ):
+        acompanhamentos = _juntar_dieta(frutas + cereais)
+        return _capitalizar_dieta(
+            f"{proteinas[0]} com {acompanhamentos}" if acompanhamentos else proteinas[0]
+        )
+    base = paes[0] if paes else (cereais[0] if cereais else "")
+    partes = []
+    if base and proteina:
+        partes.append(f"{base} com {proteina}")
+    elif base:
+        partes.append(base)
+    elif proteina:
+        partes.append(proteina)
+    acompanhamentos = frutas + vegetais
+    if acompanhamentos:
+        partes.append(_juntar_dieta(acompanhamentos))
+    if gorduras and not acompanhamentos:
+        partes.append(_juntar_dieta(gorduras))
+    return _capitalizar_dieta(_juntar_dieta(partes))
 
 
 def seed_alimentos():
@@ -3235,7 +3435,13 @@ def _gerar_dieta_automaticamente(con, aluno_id, c):
         alimentos_ativos=[dict(a) for a in alimentos],
         dados_nutricionais=[dict(a) for a in alimentos],
     )
-    return optimizer.generate()
+    resultado = optimizer.generate()
+    if isinstance(resultado, dict):
+        for refeicao in resultado.get("refeicoes", []) or []:
+            refeicao["descricao"] = descrever_refeicao(
+                refeicao.get("nome"), refeicao.get("alimentos", [])
+            )
+    return resultado
 
 
 @app.route("/aluno/<int:aluno_id>/refeicao/novo", methods=["POST"])
@@ -4381,13 +4587,17 @@ def aplicar_dieta(aluno_id):
             if not r:
                 continue
             totais = refeicao.get("totais", {})
+            descricao = refeicao.get("descricao") or descrever_refeicao(
+                refeicao.get("nome"), refeicao.get("alimentos", [])
+            )
             con.execute(
-                "UPDATE refeicoes SET calorias = ?, proteinas = ?, carbs = ?, gorduras = ? WHERE id = ?",
+                "UPDATE refeicoes SET calorias = ?, proteinas = ?, carbs = ?, gorduras = ?, descricao = ? WHERE id = ?",
                 (
                     round(float(totais.get("kcal", 0.0) or 0.0)),
                     round(float(totais.get("proteinas", 0.0) or 0.0)),
                     round(float(totais.get("carbs", 0.0) or 0.0)),
                     round(float(totais.get("gorduras", 0.0) or 0.0)),
+                    descricao,
                     r["id"],
                 ),
             )
@@ -4420,19 +4630,25 @@ def aplicar_dieta(aluno_id):
     else:
         for r in refs:
             nomes = _selecionar_alimentos(con, r["nome"], aluno_id)
+            itens_descricao = []
             ids = []
             for pn in nomes:
                 row = con.execute(
-                    "SELECT id FROM alimentos WHERE nome = ? ORDER BY id LIMIT 1", (pn,)
+                    "SELECT id, grupo_equiv FROM alimentos WHERE nome = ? ORDER BY id LIMIT 1", (pn,)
                 ).fetchone()
                 if row:
                     ids.append(row["id"])
+                    itens_descricao.append({"nome": pn, "grupo": row["grupo_equiv"]})
             pares = _pares_automaticos(
                 con,
                 [(aid, 0) for aid in ids],
                 (r["calorias"] or 0, r["proteinas"] or 0, r["carbs"] or 0, r["gorduras"] or 0),
             )
             gravar_alimentos(con, r["id"], pares)
+            con.execute(
+                "UPDATE refeicoes SET descricao = ? WHERE id = ?",
+                (descrever_refeicao(r["nome"], itens_descricao), r["id"]),
+            )
     con.commit()
     flash("Dieta gerada e aplicada ao aluno.", "success")
     return redirect(url_for("dieta", aluno_id=aluno_id))

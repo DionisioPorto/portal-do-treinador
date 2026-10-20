@@ -76,6 +76,7 @@
             <td class="strong">{{ r['nome'] }}</td>
             <td>{{ r['horario'] or '—' }}</td>
             <td>
+              {% if r['descricao'] %}<div class="strong" style="font-size:13px;margin-bottom:6px;">{{ r['descricao'] }}</div>{% endif %}
               {% if alim.get(r['id']) %}
               <div style="display:grid;gap:6px;">
                 {% for f in alim[r['id']] %}
@@ -91,7 +92,7 @@
                 </div>
                 {% endfor %}
               </div>
-              {% elif r['descricao'] %}{{ r['descricao'] }}{% else %}—{% endif %}
+              {% elif not r['descricao'] %}—{% endif %}
             </td>
             <td class="num">{{ r['calorias'] or 0 }}</td>
             <td class="num">{{ r['proteinas'] or 0 }}</td>

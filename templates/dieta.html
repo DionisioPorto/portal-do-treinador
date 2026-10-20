@@ -60,7 +60,7 @@
       <tr>
         <td style="min-width:200px;">
           <div class="strong">{{ r['nome'] }}</div>
-          {% if r['descricao'] %}<div class="muted small">{{ r['descricao'] }}</div>{% endif %}
+          {% if r['descricao'] %}<div class="small" style="margin-top:2px;font-style:italic;">{{ r['descricao'] }}</div>{% endif %}
           {% if alim.get(r['id']) %}
           <div class="food-list" style="margin-top:8px;">
             {% for f in alim[r['id']] %}
